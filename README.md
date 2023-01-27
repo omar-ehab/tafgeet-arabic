@@ -8,7 +8,7 @@ An NPM module to convert currency digits into written Arabic words
 ### Usage
 `import Tafgeet from "tafgeet-arabic";`
 
-`const stringText = new Tafgeet(55000051000.2, 'SDG').parse();` this will produce: 'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وٱثنين قرش فقط لا غير'.
+`const stringText = new Tafgeet(55000051000.2, 'EGP').parse();` this will produce: 'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وٱثنين قرش فقط لا غير'.
 
 ## Supported currencies: 
 - SDG (Sudanese Pound) - *Default*
