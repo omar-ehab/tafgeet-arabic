@@ -14,11 +14,11 @@ ES6<br>
 `const stringText = new Tafgeet(55000051000.2, 'EGP').parse();` this will produce: 'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وٱثنين قرش فقط لا غير'.
 
 ## Supported currencies: 
-- SDG (Sudanese Pound) - *Default*
+- SDG (Sudanese Pound)
 - SAR (Saudi Riyal)
 - QAR (Qatari Riyal)
 - AED (Emarati Dirham)
-- EGP (Egyptian Pound)
+- EGP (Egyptian Pound) - *Default*
 - USD (US Dollar)
 - TND (Tunisian Dinar)
 - AUD (Australian Dollar)
