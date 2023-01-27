@@ -112,7 +112,7 @@ class Tafgeet {
     const count = this.length();
     let columnIdx = this.getColumnIndex();
     if (count >= 16) {
-      throw new Error('Number out of range!')
+      throw new Error('Number out of range!');
     }
     // Sperate the number into columns
     Array.from(this.digit.toString())
@@ -155,7 +155,7 @@ class Tafgeet {
     if (this.length() >= 1 && this.length() <= 3) {
       str += this.read(this.digit);
     } else {
-      for(const element of serialized) {
+      for (const element of serialized) {
         const joinedNumber = parseInt(element.reverse().join(''), 10);
         if (joinedNumber === 0) {
           columnIdx++;
