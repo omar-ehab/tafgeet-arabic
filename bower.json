@@ -1,5 +1,5 @@
 {
-  "name": "tafgeet-js",
+  "name": "tafgeet-arabic",
   "description": "Converts currency digits into written Arabic words",
   "main": "./src/index.ts",
   "authors": [
@@ -14,7 +14,7 @@
     "words",
     "currency"
   ],
-  "homepage": "https://github.com/omar-ehab/tafgeet-js",
+  "homepage": "https://github.com/omar-ehab/tafgeet-arabic",
   "ignore": [
     "**/.*",
     "dist",

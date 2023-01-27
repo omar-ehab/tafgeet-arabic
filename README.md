@@ -1,12 +1,12 @@
 # Tafgeet-JS
 An NPM module to convert currency digits into written Arabic words
-[https://www.npmjs.com/package/tafgeet-js](https://www.npmjs.com/package/tafgeet-js)
+[https://www.npmjs.com/package/tafgeet-arabic](https://www.npmjs.com/package/tafgeet-arabic)
 
 ## How to use:
 ### Install
-`npm install tafgeet-js`
+`npm install tafgeet-arabic`
 ### Usage
-`import Tafgeet from "tafgeet-js";`
+`import Tafgeet from "tafgeet-arabic";`
 
 `const stringText = new Tafgeet(556563.20, 'SDG').parse();` this will produce: 'فقط خمسمائة وستة وخمسون ألف وخمسمائة وثلاثة وستون جنيه سوداني وعشرون قرش لا غير'.
 
