@@ -6,7 +6,10 @@ An NPM module to convert currency digits into written Arabic words
 ### Install
 `npm install tafgeet-arabic`
 ### Usage
-`import Tafgeet from "tafgeet-arabic";`
+ES5<br/>
+`const { Tafgeet } = require("tafgeet-arabic");`<br/>
+ES6<br>
+`import { Tafgeet } from "tafgeet-arabic";`
 
 `const stringText = new Tafgeet(55000051000.2, 'EGP').parse();` this will produce: 'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وٱثنين قرش فقط لا غير'.
 
