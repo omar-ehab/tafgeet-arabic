@@ -60,10 +60,10 @@ describe('Reading full amounts without a currecy specified', () => {
   });
 });
 describe('Reading full amounts', () => {
-  it('should read SDG 1', () => {
+  it('should read EGP 1', () => {
     assert.equal('واحد جنيه مصري فقط لا غير', new Tafgeet('1').parse());
   });
-  it('should read SDG 1.20', () => {
+  it('should read EGP 1.20', () => {
     assert.equal('واحد جنيه مصري وعشرون قرش فقط لا غير', new Tafgeet('1.20').parse());
   });
   it('should read TND 1.200', () => {
@@ -72,58 +72,58 @@ describe('Reading full amounts', () => {
   it('should read SDG 1.20 even if there are three decimal places', () => {
     assert.equal('واحد جنيه سوداني وعشرون قرش فقط لا غير', new Tafgeet('1.200', 'SDG').parse());
   });
-  it('should read SDG 1,000', () => {
+  it('should read EGP 1,000', () => {
     assert.equal('ألف جنيه مصري فقط لا غير', new Tafgeet('1000').parse());
   });
-  it('should read SDG 1,345', () => {
+  it('should read EGP 1,345', () => {
     assert.equal('ألف وثلاثمائة وخمسة وأربعون جنيه مصري فقط لا غير', new Tafgeet('1345').parse());
   });
-  it('should read SDG 2,455', () => {
+  it('should read EGP 2,455', () => {
     assert.equal('ألفين وأربعمائة وخمسة وخمسون جنيه مصري فقط لا غير', new Tafgeet('2455').parse());
   });
-  it('should read SDG 10,000', () => {
+  it('should read EGP 10,000', () => {
     assert.equal('عشرة ألف جنيه مصري فقط لا غير', new Tafgeet('10000').parse());
   });
-  it('should read SDG 12,444', () => {
+  it('should read EGP 12,444', () => {
     assert.equal('أثني عشر ألف وأربعمائة وأربعة وأربعون جنيه مصري فقط لا غير', new Tafgeet('12444').parse());
   });
-  it('should read SDG 100,000', () => {
+  it('should read EGP 100,000', () => {
     assert.equal('مائة ألف جنيه مصري فقط لا غير', new Tafgeet('100000').parse());
   });
-  it('should read SDG 101,000', () => {
+  it('should read EGP 101,000', () => {
     assert.equal('مائة وواحد ألف جنيه مصري فقط لا غير', new Tafgeet('101000').parse());
   });
-  it('should read SDG 102,000', () => {
+  it('should read EGP 102,000', () => {
     assert.equal('مائة وٱثنين ألف جنيه مصري فقط لا غير', new Tafgeet('102000').parse());
   });
-  it('should read SDG 1,000,000.66', () => {
+  it('should read EGP 1,000,000.66', () => {
     assert.equal('مليون جنيه مصري وستة وستون قرش فقط لا غير', new Tafgeet('1000000.66').parse());
   });
   it('should read TND 1,000,000.660', () => {
     assert.equal('مليون دينار تونسي وستمائة وستون مليم فقط لا غير', new Tafgeet('1000000.660', 'TND').parse());
   });
-  it('should read SDG 100,000', () => {
+  it('should read EGP 100,000', () => {
     assert.equal('مائة ألف جنيه مصري فقط لا غير', new Tafgeet('100000').parse());
   });
-  it('should read SDG 1,000,001,000', () => {
+  it('should read EGP 1,000,001,000', () => {
     assert.equal('مليار وألف جنيه مصري فقط لا غير', new Tafgeet('1000001000').parse());
   });
-  it('should read SDG 10,010,001,000', () => {
+  it('should read EGP 10,010,001,000', () => {
     assert.equal('عشرة مليار وعشرة مليون وألف جنيه مصري فقط لا غير', new Tafgeet('10010001000').parse());
   });
-  it('should read SDG 1,001,000,001,000', () => {
+  it('should read EGP 1,001,000,001,000', () => {
     assert.equal('ترليون ومليار وألف جنيه مصري فقط لا غير', new Tafgeet('1001000001000').parse());
   });
-  it('should read SDG 1,000,000,000,001', () => {
+  it('should read EGP 1,000,000,000,001', () => {
     assert.equal('ترليون وواحد جنيه مصري فقط لا غير', new Tafgeet('1000000000001').parse());
   });
-  it('should read SDG 1,000,100,000,001', () => {
+  it('should read EGP 1,000,100,000,001', () => {
     assert.equal('ترليون ومائة مليون وواحد جنيه مصري فقط لا غير', new Tafgeet('1000100000001').parse());
   });
-  it('should read SDG 10,000,000', () => {
+  it('should read EGP 10,000,000', () => {
     assert.equal('عشرة مليون جنيه مصري فقط لا غير', new Tafgeet('10000000').parse());
   });
-  it('should read SDG 10,000,001', () => {
+  it('should read EGP 10,000,001', () => {
     assert.equal('عشرة مليون وواحد جنيه مصري فقط لا غير', new Tafgeet('10000001').parse());
   });
   it('should read TND 1,001', () => {
@@ -135,28 +135,28 @@ describe('Reading full amounts', () => {
       new Tafgeet('556563.999', 'TND').parse(),
     );
   });
-  it('should read SDG 10,001', () => {
+  it('should read EGP 10,001', () => {
     assert.equal('عشرة ألف وواحد جنيه مصري فقط لا غير', new Tafgeet('10001').parse());
   });
-  it('should read SDG 556,563.20', () => {
+  it('should read EGP 556,563.20', () => {
     assert.equal(
       'خمسمائة وستة وخمسون ألف وخمسمائة وثلاثة وستون جنيه مصري وعشرون قرش فقط لا غير',
       new Tafgeet('556563.20').parse(),
     );
   });
-  it('should read SDG 100,100', () => {
+  it('should read EGP 100,100', () => {
     assert.equal('مائة ألف ومائة جنيه مصري فقط لا غير', new Tafgeet('100100').parse());
   });
-  it('should read SDG 55,000,051,000', () => {
+  it('should read EGP 55,000,051,000', () => {
     assert.equal('خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري فقط لا غير', new Tafgeet('55000051000').parse());
   });
-  it('should read SDG 55,000,051,000.2', () => {
+  it('should read EGP 55,000,051,000.2', () => {
     assert.equal(
       'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وٱثنين قرش فقط لا غير',
       new Tafgeet('55000051000.2').parse(),
     );
   });
-  it('should read SDG 55,000,051,000.1', () => {
+  it('should read EGP 55,000,051,000.1', () => {
     assert.equal(
       'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وواحد قرش فقط لا غير',
       new Tafgeet('55000051000.1').parse(),
