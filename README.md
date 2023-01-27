@@ -1,4 +1,4 @@
-# Tafgeet-JS
+# Tafgeet-Arabic
 An NPM module to convert currency digits into written Arabic words
 [https://www.npmjs.com/package/tafgeet-arabic](https://www.npmjs.com/package/tafgeet-arabic)
 
