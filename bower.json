@@ -1,0 +1,25 @@
+{
+  "name": "tafgeet",
+  "description": "Converts currency digits into written Arabic words",
+  "main": "./src/index.ts",
+  "authors": [
+    "Omar Ehab"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "tafgeet",
+    "tafqeet",
+    "arabic",
+    "numbers",
+    "words",
+    "currency"
+  ],
+  "homepage": "https://github.com/omar-ehab/tafgeet",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
