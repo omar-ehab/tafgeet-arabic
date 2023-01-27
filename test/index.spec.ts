@@ -1,6 +1,6 @@
 import { assert } from 'chai';
 
-import Tafgeet from '../src';
+import { Tafgeet } from '../src';
 
 const text = new Tafgeet('1');
 
