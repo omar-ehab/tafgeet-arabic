@@ -1,7 +1,7 @@
 import { columns, currencies } from './constants';
 import { NumberProperties } from './interfaces/NumberProperties';
 
-class Tafgeet {
+export class Tafgeet {
   private currency: string;
   private splitted: string[];
   private fraction: number;
@@ -293,5 +293,3 @@ class Tafgeet {
     }
   }
 }
-
-export default Tafgeet;
