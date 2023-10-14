@@ -129,6 +129,18 @@ describe('Reading full amounts', () => {
   it('should read TND 1,001', () => {
     assert.equal('ألف وواحد دينار تونسي فقط لا غير', new Tafgeet('1001', 'TND').parse());
   });
+  it('should read QAR 250,00.00', () => {
+    assert.equal('خمسة وعشرون ألف ريال قطري فقط لا غير', new Tafgeet('25000.00', 'QAR').parse());
+  });
+  it('should read QAR 250,000.00', () => {
+    assert.equal('مائتين وخمسون ألف ريال قطري فقط لا غير', new Tafgeet('250000.00', 'QAR').parse());
+  });
+  it('should read QAR 2,250,000.00', () => {
+    assert.equal('مليونين مائتين وخمسون ألف ريال قطري فقط لا غير', new Tafgeet('2250000.00', 'QAR').parse());
+  });
+  it('should read QAR 2,250,000.000', () => {
+    assert.equal('مليارين ومائتين وخمسون مليون ريال قطري فقط لا غير', new Tafgeet('2250000000.00', 'QAR').parse());
+  });
   it('should read TND 556,563.999', () => {
     assert.equal(
       'خمسمائة وستة وخمسون ألف وخمسمائة وثلاثة وستون دينار تونسي وتسعمائة وتسعة وتسعون مليم فقط لا غير',

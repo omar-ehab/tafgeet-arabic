@@ -261,7 +261,9 @@ export class Tafgeet {
       if (parseInt(arr[0], 10) === 1) {
         if (columnConstant) return columnConstant.singular;
       }
-      if (parseInt(arr[0], 10) === 2) {
+      if (parseInt(arr[0], 10) === 2 && columnConstant?.binary === 'مليونين') {
+        if (columnConstant) return columnConstant.binary + ' ';
+      } else if (parseInt(arr[0], 10) === 2) {
         if (columnConstant) return columnConstant.binary;
       }
       if (parseInt(arr[0], 10) > 2 && parseInt(arr[0], 10) <= 9) {
