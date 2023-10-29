@@ -36,6 +36,13 @@ export const currencies: Currencies = {
     fractions: 'قروش',
     decimals: 2,
   },
+  KWD: {
+    singular: 'دينار كويتي',
+    plural: 'دنانير كويتية',
+    fraction: 'فلس',
+    fractions: 'فلوس',
+    decimals: 3,
+  },
   USD: {
     singular: 'دولار أمريكي',
     plural: 'دولارات أمريكية',

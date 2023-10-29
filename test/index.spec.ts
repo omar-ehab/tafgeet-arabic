@@ -174,4 +174,22 @@ describe('Reading full amounts', () => {
       new Tafgeet('55000051000.1').parse(),
     );
   });
+  it('should read KWD 1', () => {
+    assert.equal('واحد دينار كويتي فقط لا غير', new Tafgeet('1', 'KWD').parse());
+  });
+  it('should read KWD 1.100', () => {
+    assert.equal('واحد دينار كويتي ومائة فلس فقط لا غير', new Tafgeet('1.100', 'KWD').parse());
+  });
+  it.skip('should read KWD 1.010', () => {
+    assert.equal('واحد دينار كويتي وعشرة فلوس فقط لا غير', new Tafgeet('1.010', 'KWD').parse());
+  });
+  it('should read KWD 1.001', () => {
+    assert.equal('واحد دينار كويتي وواحد فلس فقط لا غير', new Tafgeet('1.001', 'KWD').parse());
+  });
+  it('should read KWD 123.456', () => {
+    assert.equal(
+      'مائة وثلاثة وعشرون دينار كويتي وأربعمائة وستة وخمسون فلس فقط لا غير',
+      new Tafgeet('123.456', 'KWD').parse(),
+    );
+  });
 });
