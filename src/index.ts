@@ -120,91 +120,62 @@ export class Tafgeet {
     }
   }
 
-  parse() {
-    const serialized: string[][] = [];
-    let tmp: string[] = [];
-    let inc = 1;
-    const count = this.length();
-    let columnIdx = this.getColumnIndex();
-    if (count >= 16) {
+  /**
+   * Renders the amount as Arabic words, including the currency suffix
+   * and the closing فقط لا غير.
+   *
+   * @throws {Error} if the integer part is 16+ digits (kept for backward
+   *   compatibility — the constructor's stricter validation now catches
+   *   this earlier, so this branch is unreachable from current API use).
+   */
+  parse(): string {
+    const intStr = this.digit.toString();
+    if (intStr.length >= 16) {
       throw new Error('Number out of range!');
-    }
-    // Sperate the number into columns
-    Array.from(this.digit.toString())
-      .reverse()
-      .forEach((d, i) => {
-        tmp.push(d);
-        if (inc === 3) {
-          serialized.unshift(tmp);
-          tmp = [];
-          inc = 0;
-        }
-        if (inc === 0 && count - (i + 1) < 3 && count - (i + 1) !== 0) {
-          serialized.unshift(tmp);
-        }
-        inc++;
-      });
-
-    // Generate concatenation array
-    const concats: string[] = [];
-    for (let i = this.getColumnIndex(); i < columns.length; i++) {
-      concats[i] = ' و';
-    }
-
-    // Suppress the "و" connector that would precede a trailing zero group.
-    // serialized[i] corresponds to column (startCol + i); the connector emitted
-    // AFTER that column lives in concats[startCol + i]. The connector that
-    // would INTRODUCE serialized[i] lives at concats[startCol + i - 1].
-    // For each trailing zero group, clear the connector that would have led to it.
-    if (this.digit > 999) {
-      const startCol = this.getColumnIndex();
-      for (let i = serialized.length - 1; i >= 1; i--) {
-        if (parseInt(serialized[i].join(''), 10) !== 0) {
-          break;
-        }
-        const connectorCol = startCol + i - 1;
-        if (connectorCol >= 0 && connectorCol < columns.length) {
-          concats[connectorCol] = '';
-        }
-      }
     }
 
     let str = '';
 
-    if (this.length() >= 1 && this.length() <= 3) {
+    // 1–3 digit amounts have no thousands/millions/etc. column at all.
+    if (intStr.length <= 3) {
       str += this.read(this.digit);
     } else {
-      for (const element of serialized) {
-        const joinedNumber = parseInt(element.reverse().join(''), 10);
-        if (joinedNumber === 0) {
-          columnIdx++;
-          continue;
-        }
-        if (columnIdx + 1 > columns.length) {
-          str += this.read(joinedNumber);
-        } else {
-          str += this.addSuffixPrefix(element, columnIdx) + concats[columnIdx];
-        }
-        columnIdx++;
+      // Split into 3-digit groups, head-first (e.g. "1234567" -> [1, 234, 567]).
+      const startCol = this.getColumnIndex();
+      const headLen = intStr.length % 3 === 0 ? 3 : intStr.length % 3;
+      const groups: number[] = [parseInt(intStr.slice(0, headLen), 10)];
+      for (let i = headLen; i < intStr.length; i += 3) {
+        groups.push(parseInt(intStr.slice(i, i + 3), 10));
       }
+
+      // groups[i] corresponds to column (startCol + i). The final group
+      // can land at column index >= columns.length — that's the "ones"
+      // position and gets rendered without a suffix.
+      // Join non-zero parts with " و"; the trailing-zero cleanup is
+      // implicit because we only emit non-zero groups.
+      const rendered: string[] = [];
+      for (let i = 0; i < groups.length; i++) {
+        if (groups[i] === 0) continue;
+        const colIdx = startCol + i;
+        if (colIdx >= columns.length) {
+          rendered.push(this.read(groups[i]));
+        } else {
+          rendered.push(this.addSuffixForGroup(groups[i], colIdx));
+        }
+      }
+      str += rendered.join(' و');
     }
 
     if (this.currency !== '') {
-      if (this.digit >= 3 && this.digit <= 10) {
-        str += ' ' + currencies[this.currency as keyof typeof currencies].plural;
-      } else {
-        str += ' ' + currencies[this.currency as keyof typeof currencies].singular;
-      }
+      const cur = currencies[this.currency as keyof typeof currencies];
+      str += ' ' + (this.digit >= 3 && this.digit <= 10 ? cur.plural : cur.singular);
       if (this.fraction !== 0) {
         // Plural-vs-singular for the FRACTION word depends on the FRACTION
         // value (3–10 → broken plural in Arabic), not on the integer part.
         // Pre-1.1.0 this incorrectly gated on `this.digit`, so e.g.
         // `1.05 EGP` returned "...وخمسة قرش" instead of "...وخمسة قروش".
-        if (this.fraction >= 3 && this.fraction <= 10) {
-          str += ' و' + this.read(this.fraction) + ' ' + currencies[this.currency as keyof typeof currencies].fractions;
-        } else {
-          str += ' و' + this.read(this.fraction) + ' ' + currencies[this.currency as keyof typeof currencies].fraction;
-        }
+        const fracWord = this.fraction >= 3 && this.fraction <= 10 ? cur.fractions : cur.fraction;
+        str += ' و' + this.read(this.fraction) + ' ' + fracWord;
       }
     }
 
@@ -272,25 +243,21 @@ export class Tafgeet {
     return str;
   }
 
-  private addSuffixPrefix(arr: string[], columnIdx: number): string | undefined {
-    const columnConstant = this.getColumnConstantByColumnIdx(columnIdx);
-    if (!columnConstant) return undefined;
-    if (arr.length === 1) {
-      const v = parseInt(arr[0], 10);
-      if (v === 1) return columnConstant.singular;
-      if (v === 2) return columnConstant.binary;
-      if (v > 2 && v <= 9) return `${this.readOnes(v)} ${columnConstant.plural}`;
-      return undefined;
-    }
-    const joinedNumber = parseInt(arr.join(''), 10);
-    if (joinedNumber > 1) {
-      return `${this.read(joinedNumber)} ${columnConstant.singular}`;
-    }
-    return columnConstant.singular;
-  }
-
-  private getColumnConstantByColumnIdx(columnIdx: number): NumberProperties | null {
-    const colName = columns[columnIdx];
-    return COLUMN_PROPERTIES[colName] ?? null;
+  /**
+   * Renders a single 1–999 group followed by its column suffix
+   * (ألف / مليون / مليار / ترليون), applying Arabic singular / dual /
+   * plural rules for the count:
+   *   1     -> singular (ألف)
+   *   2     -> dual     (ألفين)
+   *   3–9   -> count + plural (ثلاثة ألآف)
+   *   10+   -> rendered + singular (عشرة ألف)
+   */
+  private addSuffixForGroup(value: number, columnIdx: number): string {
+    const props = COLUMN_PROPERTIES[columns[columnIdx]];
+    if (!props) return this.read(value);
+    if (value === 1) return props.singular;
+    if (value === 2) return props.binary;
+    if (value >= 3 && value <= 9) return `${ONES[value]} ${props.plural}`;
+    return `${this.read(value)} ${props.singular}`;
   }
 }
