@@ -17,8 +17,12 @@ jobs:
         # Test on both Linux (typical CI) and Windows (the test script
         # was Unix-only prior to v1.1.0 — keep it that way).
         os: [ubuntu-latest, windows-latest]
-        # Match the support window of the published package.
-        node: [18, 20, 22]
+        # The published package runs fine on Node 18+ (no Node 20-only
+        # APIs in src/), but ESLint 9 requires Node ^20.19 || ^22.13 || >=24.
+        # We can't lint on Node 18 in CI, so we test on the versions our
+        # dev tooling supports. Node 18 consumers are still supported at
+        # runtime (see "engines" in package.json).
+        node: [20, 22]
 
     steps:
       - uses: actions/checkout@v4

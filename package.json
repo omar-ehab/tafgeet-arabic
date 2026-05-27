@@ -31,6 +31,9 @@
   ],
   "author": "Omar Ehab",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "bugs": {
     "url": "https://github.com/omar-ehab/tafgeet-arabic/issues"
   },
