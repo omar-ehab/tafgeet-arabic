@@ -4,7 +4,7 @@
   "description": "Converts currency digits into written Arabic words",
   "main": "dist/src/index.js",
   "scripts": {
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/**/*.ts'",
+    "test": "mocha -r ts-node/register \"test/**/*.ts\"",
     "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\" \"dist/src/**/*.js\"",
     "lint": "tslint -p tsconfig.json",
