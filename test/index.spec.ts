@@ -230,4 +230,48 @@ describe('Reading full amounts', () => {
   it('should read EGP 2,000,000 (no trailing connector)', () => {
     assert.equal('مليونين جنيه مصري فقط لا غير', new Tafgeet('2000000').parse());
   });
+
+  // Regression tests for the fraction singular/plural bug (the bug behind
+  // the it.skip'd test in #3). The fraction word must be plural for
+  // fraction values 3–10 and singular otherwise — driven by the FRACTION
+  // value, not the integer part of the amount.
+  it('should use SINGULAR fraction word for fraction=1', () => {
+    assert.equal('واحد جنيه مصري وواحد قرش فقط لا غير', new Tafgeet('1.01').parse());
+  });
+  it('should use SINGULAR fraction word for fraction=2', () => {
+    assert.equal('واحد جنيه مصري وٱثنين قرش فقط لا غير', new Tafgeet('1.02').parse());
+  });
+  it('should use PLURAL fraction word for fraction=3', () => {
+    assert.equal('واحد جنيه مصري وثلاثة قروش فقط لا غير', new Tafgeet('1.03').parse());
+  });
+  it('should use PLURAL fraction word for fraction=5', () => {
+    assert.equal('واحد جنيه مصري وخمسة قروش فقط لا غير', new Tafgeet('1.05').parse());
+  });
+  it('should use PLURAL fraction word for fraction=10', () => {
+    assert.equal('واحد جنيه مصري وعشرة قروش فقط لا غير', new Tafgeet('1.10').parse());
+  });
+  it('should use SINGULAR fraction word for fraction=11', () => {
+    assert.equal('واحد جنيه مصري وأحد عشر قرش فقط لا غير', new Tafgeet('1.11').parse());
+  });
+  it('should use SINGULAR fraction word for fraction=99', () => {
+    assert.equal('واحد جنيه مصري وتسعة وتسعون قرش فقط لا غير', new Tafgeet('1.99').parse());
+  });
+  // Cross-check: when BOTH integer and fraction are in 3–10, plural
+  // applies to both — previously coincidentally correct, must stay correct.
+  it('should pluralize both currency and fraction when both in 3–10', () => {
+    assert.equal('خمسة جنيهات مصرية وخمسة قروش فقط لا غير', new Tafgeet('5.05').parse());
+  });
+  // The decisive case: integer outside 3–10 but fraction inside.
+  // Pre-1.1.0 this incorrectly produced singular `قرش`.
+  it('should pluralize fraction when integer is OUT of 3–10 (regression)', () => {
+    assert.equal('مائة جنيه مصري وخمسة قروش فقط لا غير', new Tafgeet('100.05').parse());
+  });
+  // Same shape for TND (3-decimal currency).
+  it('should pluralize TND fraction in 3–10', () => {
+    assert.equal('واحد دينار تونسي وخمسة مليمات فقط لا غير', new Tafgeet('1.005', 'TND').parse());
+  });
+  // Same shape for USD.
+  it('should pluralize USD fraction in 3–10', () => {
+    assert.equal('واحد دولار أمريكي وخمسة سنتات فقط لا غير', new Tafgeet('1.05', 'USD').parse());
+  });
 });
