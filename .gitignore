@@ -1,4 +1,12 @@
+# Editors / IDEs
 .idea
 .vscode
+
+# Dependencies
 node_modules
+
+# Build output
 /dist
+
+# Untracked but kept locally
+CODE_OF_CONDUCT.md
