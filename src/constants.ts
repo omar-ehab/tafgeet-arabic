@@ -1,5 +1,4 @@
-import { Currencies } from './interfaces/currency';
-import { NumberProperties } from './interfaces/NumberProperties';
+import { Currencies, NumberProperties } from './types';
 
 export const currencies: Currencies = {
   SDG: {

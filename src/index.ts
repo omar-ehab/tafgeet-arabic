@@ -1,17 +1,8 @@
-import {
-  BILLIONS,
-  COLUMN_PROPERTIES,
-  columns,
-  currencies,
-  HUNDREDS,
-  MILLIONS,
-  ONES,
-  TEENS,
-  TENS,
-  THOUSANDS,
-  TRILLIONS,
-} from './constants';
-import { NumberProperties } from './interfaces/NumberProperties';
+import { COLUMN_PROPERTIES, columns, currencies, HUNDREDS, ONES, TEENS, TENS } from './constants';
+
+// Re-export public types so consumers can import them directly:
+//   import { Tafgeet, Currency, Currencies, NumberProperties } from 'tafgeet-arabic';
+export type { Currency, Currencies, NumberProperties } from './types';
 
 export class Tafgeet {
   private currency: string;
@@ -19,23 +10,11 @@ export class Tafgeet {
   private fraction: number;
   private digit: number;
 
-  // Kept for backward compatibility with anyone reaching into private
-  // state — these now reference the shared module-level dictionaries
-  // rather than per-instance allocations.
-  private ones = ONES;
-  private teens = TEENS;
-  private tens = TENS;
-  private hundreds = HUNDREDS;
-  private thousands: NumberProperties = THOUSANDS;
-  private millions: NumberProperties = MILLIONS;
-  private billions: NumberProperties = BILLIONS;
-  private trillions: NumberProperties = TRILLIONS;
-
   constructor(digit: string | number, currency: string = 'EGP') {
     Tafgeet.validateInput(digit, currency);
     this.currency = currency;
     this.splitted = digit.toString().split('.');
-    this.digit = parseInt(this.splitted[0], 10);
+    this.digit = parseInt(this.splitted[0] ?? '0', 10);
     this.fraction = this.parseFraction(this.splitted[1], currency);
   }
 
@@ -66,6 +45,9 @@ export class Tafgeet {
    * for malformed input. Pre-1.1.0 invalid input either crashed deep
    * inside parse() with a cryptic TypeError, or silently produced
    * strings containing the literal word "undefined".
+   *
+   * Accepts `unknown` because JS callers can pass values that violate
+   * the public type signature — that's the whole point of validation.
    *
    * Throws:
    *   TypeError  — wrong type, non-numeric string, null/undefined
@@ -102,7 +84,7 @@ export class Tafgeet {
       normalized = trimmed;
     }
 
-    const intPartStr = normalized.split('.')[0];
+    const intPartStr = normalized.split('.')[0] ?? '';
     const intPart = parseInt(intPartStr, 10);
     if (intPart < 1) {
       // Amounts < 1 (e.g. "0", "0.5") are not supported in 1.x — the
@@ -158,12 +140,13 @@ export class Tafgeet {
       // implicit because we only emit non-zero groups.
       const rendered: string[] = [];
       for (let i = 0; i < groups.length; i++) {
-        if (groups[i] === 0) continue;
+        const value = groups[i] ?? 0;
+        if (value === 0) continue;
         const colIdx = startCol + i;
         if (colIdx >= columns.length) {
-          rendered.push(this.read(groups[i]));
+          rendered.push(this.read(value));
         } else {
-          rendered.push(this.addSuffixForGroup(groups[i], colIdx));
+          rendered.push(this.addSuffixForGroup(value, colIdx));
         }
       }
       str += rendered.join(' و');
@@ -192,8 +175,8 @@ export class Tafgeet {
    * `parse()` instead.
    */
   read(d: number): string {
-    if (d < 10) return this.readOnes(d) ?? '';
-    if (d < 100) return this.readTens(d) ?? '';
+    if (d < 10) return this.readOnes(d);
+    if (d < 100) return this.readTens(d);
     if (d < 1000) return this.readHundreds(d);
     return '';
   }
@@ -217,18 +200,20 @@ export class Tafgeet {
     return 0;
   }
 
-  private readOnes(d: number): string | undefined {
-    if (d === 0) return undefined;
-    return ONES[d];
+  private readOnes(d: number): string {
+    if (d === 0) return '';
+    return ONES[d] ?? '';
   }
 
-  private readTens(d: number): string | undefined {
+  private readTens(d: number): string {
     const onesDigit = d % 10;
     const tensDigit = Math.floor(d / 10);
-    if (onesDigit === 0) return TENS[d];
-    if (d > 10 && d < 20) return TEENS[d];
-    if (d > 19 && d < 100) return ONES[onesDigit] + ' و' + TENS[tensDigit * 10];
-    return undefined;
+    if (onesDigit === 0) return TENS[d] ?? '';
+    if (d > 10 && d < 20) return TEENS[d] ?? '';
+    if (d > 19 && d < 100) {
+      return (ONES[onesDigit] ?? '') + ' و' + (TENS[tensDigit * 10] ?? '');
+    }
+    return '';
   }
 
   private readHundreds(d: number): string {
@@ -237,9 +222,9 @@ export class Tafgeet {
     const tensDigit = Math.floor(lastTwo / 10);
     const onesDigit = lastTwo % 10;
 
-    let str = HUNDREDS[hundredsDigit * 100];
+    let str = HUNDREDS[hundredsDigit * 100] ?? '';
     if (tensDigit === 0 && onesDigit !== 0) {
-      str += ' و' + ONES[onesDigit];
+      str += ' و' + (ONES[onesDigit] ?? '');
     } else if (tensDigit !== 0) {
       str += ' و' + this.readTens(lastTwo);
     }
@@ -256,11 +241,12 @@ export class Tafgeet {
    *   10+   -> rendered + singular (عشرة ألف)
    */
   private addSuffixForGroup(value: number, columnIdx: number): string {
-    const props = COLUMN_PROPERTIES[columns[columnIdx]];
+    const colName = columns[columnIdx];
+    const props = colName ? COLUMN_PROPERTIES[colName] : undefined;
     if (!props) return this.read(value);
     if (value === 1) return props.singular;
     if (value === 2) return props.binary;
-    if (value >= 3 && value <= 9) return `${ONES[value]} ${props.plural}`;
+    if (value >= 3 && value <= 9) return `${ONES[value] ?? ''} ${props.plural}`;
     return `${this.read(value)} ${props.singular}`;
   }
 }

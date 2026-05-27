@@ -5,6 +5,7 @@
   "main": "dist/src/index.js",
   "scripts": {
     "test": "mocha -r ts-node/register \"test/**/*.ts\"",
+    "test:js-compat": "npm run build && node test/js-compat.cjs",
     "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\" \"dist/src/**/*.js\"",
     "lint": "tslint -p tsconfig.json",
@@ -33,15 +34,15 @@
   },
   "homepage": "https://github.com/omar-ehab/tafgeet-arabic#readme",
   "devDependencies": {
-    "@types/chai": "^4.3.4",
-    "@types/mocha": "^10.0.1",
-    "chai": "^4.3.7",
-    "mocha": "^10.2.0",
-    "prettier": "^2.8.3",
-    "ts-node": "^10.9.1",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "chai": "^6.2.2",
+    "mocha": "^11.7.6",
+    "prettier": "^3.8.3",
+    "ts-node": "^10.9.2",
     "tslint": "^6.1.3",
     "tslint-config-prettier": "^1.18.0",
-    "typescript": "^4.9.4"
+    "typescript": "^5.9.3"
   },
   "files": [
     "dist/**/*"
