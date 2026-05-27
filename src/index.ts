@@ -136,16 +136,20 @@ export class Tafgeet {
       concats[i] = ' و';
     }
 
-    // We do not need some "و"s check last column if 000 drill down until otherwise
+    // Suppress the "و" connector that would precede a trailing zero group.
+    // serialized[i] corresponds to column (startCol + i); the connector emitted
+    // AFTER that column lives in concats[startCol + i]. The connector that
+    // would INTRODUCE serialized[i] lives at concats[startCol + i - 1].
+    // For each trailing zero group, clear the connector that would have led to it.
     if (this.digit > 999) {
-      if (parseInt(Array.from(serialized[serialized.length - 1]).join(''), 10) === 0) {
-        concats[concats.length - 1] = '';
-        for (let i = serialized.length - 1; i >= 1; i--) {
-          if (parseInt(Array.from(serialized[i]).join(''), 10) === 0) {
-            concats[i] = '';
-          } else {
-            break;
-          }
+      const startCol = this.getColumnIndex();
+      for (let i = serialized.length - 1; i >= 1; i--) {
+        if (parseInt(serialized[i].join(''), 10) !== 0) {
+          break;
+        }
+        const connectorCol = startCol + i - 1;
+        if (connectorCol >= 0 && connectorCol < concats.length) {
+          concats[connectorCol] = '';
         }
       }
     }
@@ -261,9 +265,7 @@ export class Tafgeet {
       if (parseInt(arr[0], 10) === 1) {
         if (columnConstant) return columnConstant.singular;
       }
-      if (parseInt(arr[0], 10) === 2 && columnConstant?.binary === 'مليونين') {
-        if (columnConstant) return columnConstant.binary + ' ';
-      } else if (parseInt(arr[0], 10) === 2) {
+      if (parseInt(arr[0], 10) === 2) {
         if (columnConstant) return columnConstant.binary;
       }
       if (parseInt(arr[0], 10) > 2 && parseInt(arr[0], 10) <= 9) {
