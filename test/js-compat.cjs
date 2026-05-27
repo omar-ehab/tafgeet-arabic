@@ -14,11 +14,7 @@ const { Tafgeet } = require('../dist/src/index.js');
 assert.equal(typeof Tafgeet, 'function', 'Tafgeet should be a constructor function');
 
 // --- Smoke: integer amounts ------------------------------------------------
-assert.equal(
-  new Tafgeet('1').parse(),
-  'واحد جنيه مصري فقط لا غير',
-  '1 EGP',
-);
+assert.equal(new Tafgeet('1').parse(), 'واحد جنيه مصري فقط لا غير', '1 EGP');
 assert.equal(
   new Tafgeet('1234567').parse(),
   'مليون ومائتين وأربعة وثلاثون ألف وخمسمائة وسبعة وستون جنيه مصري فقط لا غير',
@@ -47,11 +43,7 @@ assert.equal(
 );
 
 // --- Smoke: numeric input (not just string) ------------------------------
-assert.equal(
-  new Tafgeet(44).parse(),
-  'أربعة وأربعون جنيه مصري فقط لا غير',
-  '44 EGP (number input)',
-);
+assert.equal(new Tafgeet(44).parse(), 'أربعة وأربعون جنيه مصري فقط لا غير', '44 EGP (number input)');
 
 // --- Smoke: input validation throws cleanly for JS callers ---------------
 assert.throws(() => new Tafgeet(null), TypeError, 'null amount throws TypeError');

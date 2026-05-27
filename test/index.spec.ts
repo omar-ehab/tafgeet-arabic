@@ -183,49 +183,28 @@ describe('Reading full amounts', () => {
   // was wrongly suppressed by the trailing-zero cleanup loop, producing
   // outputs like "مليونمائة ألف …" instead of "مليون ومائة ألف …".
   it('should read SAR 1,100,000 (issue #8)', () => {
-    assert.equal(
-      'مليون ومائة ألف ريال سعودي فقط لا غير',
-      new Tafgeet('1100000', 'SAR').parse(),
-    );
+    assert.equal('مليون ومائة ألف ريال سعودي فقط لا غير', new Tafgeet('1100000', 'SAR').parse());
   });
   it('should read SAR 1,010,000 (issue #8 variant)', () => {
-    assert.equal(
-      'مليون وعشرة ألف ريال سعودي فقط لا غير',
-      new Tafgeet('1010000', 'SAR').parse(),
-    );
+    assert.equal('مليون وعشرة ألف ريال سعودي فقط لا غير', new Tafgeet('1010000', 'SAR').parse());
   });
   it('should read EGP 1,100,000 (issue #8, any currency)', () => {
-    assert.equal(
-      'مليون ومائة ألف جنيه مصري فقط لا غير',
-      new Tafgeet('1100000').parse(),
-    );
+    assert.equal('مليون ومائة ألف جنيه مصري فقط لا غير', new Tafgeet('1100000').parse());
   });
   it('should read EGP 1,500,000 (issue #8 variant)', () => {
-    assert.equal(
-      'مليون وخمسمائة ألف جنيه مصري فقط لا غير',
-      new Tafgeet('1500000').parse(),
-    );
+    assert.equal('مليون وخمسمائة ألف جنيه مصري فقط لا غير', new Tafgeet('1500000').parse());
   });
   it('should read EGP 1,000,100 — non-trailing zero unchanged (issue #8 control)', () => {
-    assert.equal(
-      'مليون ومائة جنيه مصري فقط لا غير',
-      new Tafgeet('1000100').parse(),
-    );
+    assert.equal('مليون ومائة جنيه مصري فقط لا غير', new Tafgeet('1000100').parse());
   });
 
   // Regression tests for issue #7 (likely the same class as #8, around the
   // 2-millions hardcoded literal branch that has been removed in 1.1.0).
   it('should read QAR 2,100,000 (issue #7 class)', () => {
-    assert.equal(
-      'مليونين ومائة ألف ريال قطري فقط لا غير',
-      new Tafgeet('2100000', 'QAR').parse(),
-    );
+    assert.equal('مليونين ومائة ألف ريال قطري فقط لا غير', new Tafgeet('2100000', 'QAR').parse());
   });
   it('should read EGP 2,500,000 (issue #7 class)', () => {
-    assert.equal(
-      'مليونين وخمسمائة ألف جنيه مصري فقط لا غير',
-      new Tafgeet('2500000').parse(),
-    );
+    assert.equal('مليونين وخمسمائة ألف جنيه مصري فقط لا غير', new Tafgeet('2500000').parse());
   });
   it('should read EGP 2,000,000 (no trailing connector)', () => {
     assert.equal('مليونين جنيه مصري فقط لا غير', new Tafgeet('2000000').parse());
