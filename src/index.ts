@@ -181,7 +181,11 @@ export class Tafgeet {
         str += ' ' + currencies[this.currency as keyof typeof currencies].singular;
       }
       if (this.fraction !== 0) {
-        if (this.digit >= 3 && this.digit <= 10) {
+        // Plural-vs-singular for the FRACTION word depends on the FRACTION
+        // value (3–10 → broken plural in Arabic), not on the integer part.
+        // Pre-1.1.0 this incorrectly gated on `this.digit`, so e.g.
+        // `1.05 EGP` returned "...وخمسة قرش" instead of "...وخمسة قروش".
+        if (this.fraction >= 3 && this.fraction <= 10) {
           str += ' و' + this.read(this.fraction) + ' ' + currencies[this.currency as keyof typeof currencies].fractions;
         } else {
           str += ' و' + this.read(this.fraction) + ' ' + currencies[this.currency as keyof typeof currencies].fraction;
