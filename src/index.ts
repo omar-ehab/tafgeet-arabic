@@ -36,26 +36,29 @@ export class Tafgeet {
     this.currency = currency;
     this.splitted = digit.toString().split('.');
     this.digit = parseInt(this.splitted[0], 10);
-    this.fraction = 0;
-    let fraction: string | number;
-    if (this.splitted.length > 1) {
-      if (this.splitted[1].length > 1) {
-        fraction = parseInt(this.splitted[1], 10);
-        if (fraction >= 1 && fraction <= 99) {
-          this.fraction = this.splitted[1].length === 1 ? fraction * 10 : fraction;
-        } else {
-          // trim it
-          const trimmed = this.splitted[1].split('');
-          fraction = '';
-          for (let index = 0; index < currencies[currency as keyof typeof currencies].decimals; index++) {
-            fraction += trimmed[index];
-          }
-          this.fraction = parseInt(fraction, 10);
-        }
-      } else {
-        this.fraction = parseInt(this.splitted[1], 10);
-      }
-    }
+    this.fraction = this.parseFraction(this.splitted[1], currency);
+  }
+
+  /**
+   * Parses the fractional portion of the amount.
+   *
+   *   undefined / ""    -> 0
+   *   1 digit  ("2")    -> 2           (literal, no padding — historical
+   *                                     behavior preserved for backward
+   *                                     compatibility; "1.2 EGP" still
+   *                                     renders as "1 pound and 2 piaster",
+   *                                     not "20 piaster")
+   *   2 digits ("20")   -> 20
+   *   3+ digits         -> truncated to the currency's decimals count
+   *                        ("1.999 SDG"  -> 99,  decimals=2)
+   *                        ("1.456 TND"  -> 456, decimals=3)
+   */
+  private parseFraction(fracStr: string | undefined, currency: string): number {
+    if (!fracStr) return 0;
+    if (fracStr.length <= 2) return parseInt(fracStr, 10);
+
+    const decimals = currencies[currency as keyof typeof currencies]?.decimals ?? 2;
+    return parseInt(fracStr.slice(0, decimals), 10);
   }
 
   /**
