@@ -2,13 +2,30 @@
   "name": "tafgeet-arabic",
   "version": "1.1.0",
   "description": "Converts currency digits into written Arabic words",
-  "main": "dist/src/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "scripts": {
     "test": "mocha -r ts-node/register \"test/**/*.ts\"",
-    "test:js-compat": "npm run build && node test/js-compat.cjs",
-    "build": "tsc",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.{ts,cjs}\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.{ts,cjs}\"",
+    "test:js-compat": "npm run build && node test/js-compat.cjs && node test/esm-compat.mjs",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.{ts,cjs,mjs}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.{ts,cjs,mjs}\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prepare": "npm run build",
@@ -48,6 +65,7 @@
     "mocha": "^11.7.6",
     "prettier": "^3.8.3",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.60.0"
   },
