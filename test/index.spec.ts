@@ -275,3 +275,88 @@ describe('Reading full amounts', () => {
     assert.equal('واحد دولار أمريكي وخمسة سنتات فقط لا غير', new Tafgeet('1.05', 'USD').parse());
   });
 });
+
+describe('Input validation (1.1.0)', () => {
+  describe('rejects with TypeError', () => {
+    it('null amount', () => {
+      assert.throws(() => new Tafgeet(null as any), TypeError, /amount is required/);
+    });
+    it('undefined amount', () => {
+      assert.throws(() => new Tafgeet(undefined as any), TypeError, /amount is required/);
+    });
+    it('boolean amount', () => {
+      assert.throws(() => new Tafgeet(true as any), TypeError, /must be a number or numeric string/);
+    });
+    it('object amount', () => {
+      assert.throws(() => new Tafgeet({} as any), TypeError, /must be a number or numeric string/);
+    });
+    it('empty string amount', () => {
+      assert.throws(() => new Tafgeet(''), TypeError, /plain decimal number/);
+    });
+    it('non-numeric string', () => {
+      assert.throws(() => new Tafgeet('abc'), TypeError, /plain decimal number/);
+    });
+    it('scientific-notation string', () => {
+      // Pre-1.1.0 parseInt silently truncated "1e3" to 1. Now rejected.
+      assert.throws(() => new Tafgeet('1e3'), TypeError, /plain decimal number/);
+    });
+    it('string with leading spaces around junk', () => {
+      assert.throws(() => new Tafgeet(' abc '), TypeError, /plain decimal number/);
+    });
+    it('numeric currency', () => {
+      assert.throws(() => new Tafgeet(5, 123 as any), TypeError, /currency must be a string/);
+    });
+  });
+
+  describe('rejects with RangeError', () => {
+    it('NaN', () => {
+      assert.throws(() => new Tafgeet(NaN), RangeError, /finite number/);
+    });
+    it('positive Infinity', () => {
+      assert.throws(() => new Tafgeet(Infinity), RangeError, /finite number/);
+    });
+    it('negative Infinity', () => {
+      assert.throws(() => new Tafgeet(-Infinity), RangeError, /finite number/);
+    });
+    it('negative number', () => {
+      assert.throws(() => new Tafgeet(-5), RangeError, /non-negative/);
+    });
+    it('negative string', () => {
+      assert.throws(() => new Tafgeet('-5'), RangeError, /non-negative/);
+    });
+    it('zero', () => {
+      assert.throws(() => new Tafgeet(0), RangeError, /integer part must be >= 1/);
+    });
+    it('zero string', () => {
+      assert.throws(() => new Tafgeet('0.50'), RangeError, /integer part must be >= 1/);
+    });
+    it('16+ digit integer', () => {
+      assert.throws(() => new Tafgeet('1000000000000000'), RangeError, /< 16 digits/);
+    });
+  });
+
+  describe('rejects unknown currency', () => {
+    it('throws with helpful list of supported codes', () => {
+      assert.throws(
+        () => new Tafgeet(5, 'XYZ'),
+        /unknown currency "XYZ"\. Supported: SDG, SAR, QAR, AED, EGP, USD, AUD, TND, TRY/,
+      );
+    });
+  });
+
+  describe('accepts valid inputs unchanged (backward compat)', () => {
+    it('empty-string currency still produces no-currency output', () => {
+      assert.equal('أربعة وسبعون فقط لا غير', new Tafgeet('74', '').parse());
+    });
+    it('default EGP currency', () => {
+      assert.equal('واحد جنيه مصري فقط لا غير', new Tafgeet(1).parse());
+    });
+    it('numeric input (not just string)', () => {
+      assert.equal('واحد جنيه مصري فقط لا غير', new Tafgeet(1).parse());
+    });
+    it('15-digit integer (largest supported)', () => {
+      // Boundary: 15 digits OK, 16 rejected.
+      assert.doesNotThrow(() => new Tafgeet('999000000000000'));
+    });
+  });
+});

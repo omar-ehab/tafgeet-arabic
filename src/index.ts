@@ -16,6 +16,7 @@ export class Tafgeet {
   private trillions: NumberProperties;
 
   constructor(digit: string | number, currency: string = 'EGP') {
+    Tafgeet.validateInput(digit, currency);
     this.currency = currency;
     this.splitted = digit.toString().split('.');
     this.digit = parseInt(this.splitted[0], 10);
@@ -102,6 +103,67 @@ export class Tafgeet {
       } else {
         this.fraction = parseInt(this.splitted[1], 10);
       }
+    }
+  }
+
+  /**
+   * Validates the constructor arguments and throws a clear, typed error
+   * for malformed input. Pre-1.1.0 invalid input either crashed deep
+   * inside parse() with a cryptic TypeError, or silently produced
+   * strings containing the literal word "undefined".
+   *
+   * Throws:
+   *   TypeError  — wrong type, non-numeric string, null/undefined
+   *   RangeError — NaN, Infinity, negative, zero, or > 15 digits
+   *   Error      — unknown currency code
+   */
+  private static validateInput(digit: unknown, currency: unknown): void {
+    if (digit === null || digit === undefined) {
+      throw new TypeError(`Tafgeet: amount is required, got ${String(digit)}`);
+    }
+    if (typeof digit !== 'number' && typeof digit !== 'string') {
+      throw new TypeError(`Tafgeet: amount must be a number or numeric string, got ${typeof digit}`);
+    }
+
+    let normalized: string;
+    if (typeof digit === 'number') {
+      if (!Number.isFinite(digit)) {
+        throw new RangeError(`Tafgeet: amount must be a finite number, got ${digit}`);
+      }
+      if (digit < 0) {
+        throw new RangeError(`Tafgeet: amount must be non-negative, got ${digit}`);
+      }
+      normalized = digit.toString();
+    } else {
+      const trimmed = digit.trim();
+      if (trimmed === '' || !/^-?\d+(\.\d+)?$/.test(trimmed)) {
+        throw new TypeError(
+          `Tafgeet: amount string must be a plain decimal number (e.g. "1234.56"), got "${digit}"`,
+        );
+      }
+      if (trimmed.startsWith('-')) {
+        throw new RangeError(`Tafgeet: amount must be non-negative, got "${digit}"`);
+      }
+      normalized = trimmed;
+    }
+
+    const intPart = parseInt(normalized.split('.')[0], 10);
+    if (intPart < 1) {
+      // Amounts < 1 (e.g. "0", "0.5") are not supported in 1.x — the
+      // dictionaries have no "صفر" entry and the column logic assumes
+      // at least one integer digit. Tracked as a future enhancement.
+      throw new RangeError(`Tafgeet: integer part must be >= 1, got "${normalized}"`);
+    }
+    if (normalized.split('.')[0].length >= 16) {
+      throw new RangeError(`Tafgeet: integer part must be < 16 digits, got "${normalized}"`);
+    }
+
+    if (typeof currency !== 'string') {
+      throw new TypeError(`Tafgeet: currency must be a string, got ${typeof currency}`);
+    }
+    if (currency !== '' && !(currency in currencies)) {
+      const supported = Object.keys(currencies).join(', ');
+      throw new Error(`Tafgeet: unknown currency "${currency}". Supported: ${supported}`);
     }
   }
 
