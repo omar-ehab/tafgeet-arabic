@@ -1,4 +1,4 @@
-import { Currencies, NumberProperties } from './types';
+import { CurrencyCode, Currencies, NumberProperties } from './types';
 
 export const currencies: Currencies = {
   SDG: {
@@ -74,6 +74,29 @@ export const currencies: Currencies = {
 };
 
 export const columns: readonly string[] = ['trillions', 'billions', 'millions', 'thousands'];
+
+/**
+ * Runtime-accessible list of built-in currency codes. Useful for
+ * iterating supported currencies or validating user input without
+ * a try/catch around the constructor.
+ *
+ *   if (SUPPORTED_CURRENCIES.includes(userInput as CurrencyCode)) { ... }
+ *
+ * Kept in sync with the `Currencies` interface; if you ever bundle
+ * a new currency, add it here AND to `Currencies` AND to `currencies`.
+ */
+export const SUPPORTED_CURRENCIES: readonly CurrencyCode[] = Object.freeze([
+  'SDG',
+  'SAR',
+  'QAR',
+  'AED',
+  'EGP',
+  'KWD',
+  'USD',
+  'AUD',
+  'TND',
+  'TRY',
+]);
 
 // -- Number-word dictionaries -------------------------------------------------
 // Indexed by the digit value (1-9 for ones, etc.) so callers can do

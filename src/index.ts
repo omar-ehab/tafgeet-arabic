@@ -1,8 +1,13 @@
 import { COLUMN_PROPERTIES, columns, currencies, HUNDREDS, ONES, TEENS, TENS } from './constants';
+import { CurrencyInput } from './types';
 
-// Re-export public types so consumers can import them directly:
-//   import { Tafgeet, Currency, Currencies, NumberProperties } from 'tafgeet-arabic';
-export type { Currency, Currencies, NumberProperties } from './types';
+// Re-export public types + runtime helpers so consumers can import them
+// directly:
+//
+//   import { Tafgeet, SUPPORTED_CURRENCIES } from 'tafgeet-arabic';
+//   import type { Currency, Currencies, CurrencyCode, CurrencyInput, NumberProperties } from 'tafgeet-arabic';
+export type { Currency, Currencies, CurrencyCode, CurrencyInput, NumberProperties } from './types';
+export { SUPPORTED_CURRENCIES } from './constants';
 
 export class Tafgeet {
   private currency: string;
@@ -10,7 +15,7 @@ export class Tafgeet {
   private fraction: number;
   private digit: number;
 
-  constructor(digit: string | number, currency: string = 'EGP') {
+  constructor(digit: string | number, currency: CurrencyInput = 'EGP') {
     Tafgeet.validateInput(digit, currency);
     this.currency = currency;
     this.splitted = digit.toString().split('.');
