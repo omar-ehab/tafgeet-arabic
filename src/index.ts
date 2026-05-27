@@ -74,9 +74,7 @@ export class Tafgeet {
     } else {
       const trimmed = digit.trim();
       if (trimmed === '' || !/^-?\d+(\.\d+)?$/.test(trimmed)) {
-        throw new TypeError(
-          `Tafgeet: amount string must be a plain decimal number (e.g. "1234.56"), got "${digit}"`,
-        );
+        throw new TypeError(`Tafgeet: amount string must be a plain decimal number (e.g. "1234.56"), got "${digit}"`);
       }
       if (trimmed.startsWith('-')) {
         throw new RangeError(`Tafgeet: amount must be non-negative, got "${digit}"`);

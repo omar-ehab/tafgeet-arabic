@@ -7,8 +7,10 @@
     "test": "mocha -r ts-node/register \"test/**/*.ts\"",
     "test:js-compat": "npm run build && node test/js-compat.cjs",
     "build": "tsc",
-    "format": "prettier --write \"src/**/*.ts\" \"dist/src/**/*.js\"",
-    "lint": "tslint -p tsconfig.json",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.{ts,cjs}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.{ts,cjs}\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",
@@ -29,22 +31,31 @@
   ],
   "author": "Omar Ehab",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "bugs": {
     "url": "https://github.com/omar-ehab/tafgeet-arabic/issues"
   },
   "homepage": "https://github.com/omar-ehab/tafgeet-arabic#readme",
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
     "chai": "^6.2.2",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
     "mocha": "^11.7.6",
     "prettier": "^3.8.3",
     "ts-node": "^10.9.2",
-    "tslint": "^6.1.3",
-    "tslint-config-prettier": "^1.18.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.60.0"
   },
   "files": [
     "dist/**/*"
-  ]
+  ],
+  "overrides": {
+    "serialize-javascript": "^7.0.5",
+    "diff": "^8.0.3"
+  }
 }

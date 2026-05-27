@@ -1,0 +1,21 @@
+# Normalize all text files to LF line endings in the git index.
+# Without this, Windows machines with `core.autocrlf=true` (the default)
+# check files out as CRLF, which breaks `prettier --check` in CI on
+# windows-latest runners.
+
+* text=auto eol=lf
+
+# Specific overrides for files that genuinely need CRLF.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binary files — never touch line endings.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.tgz   binary
