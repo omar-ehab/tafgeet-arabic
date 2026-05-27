@@ -52,7 +52,9 @@ module.exports = tseslint.config(
     },
   },
 
-  // 7. The JS smoke test is plain CJS — not type-checked.
+  // 7. Plain-JS smoke tests (CJS .cjs + ESM .mjs) — not type-checked.
+  //    Need Node globals declared explicitly since they're outside the
+  //    TS source tree.
   {
     files: ['test/**/*.cjs'],
     languageOptions: {
@@ -67,6 +69,16 @@ module.exports = tseslint.config(
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-var-requires': 'off',
+    },
+  },
+  {
+    files: ['test/**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
     },
   },
 
