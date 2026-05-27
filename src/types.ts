@@ -50,3 +50,28 @@ export interface Currencies {
   TND: Currency;
   TRY: Currency;
 }
+
+/**
+ * Union of all built-in currency code strings. Use this in your own
+ * type signatures to enforce a known code at compile time:
+ *
+ *   function quote(amount: number, code: CurrencyCode) { ... }
+ *
+ * Derived from `Currencies` via `keyof`, so adding a currency to
+ * the `Currencies` interface automatically extends `CurrencyCode`.
+ */
+export type CurrencyCode = keyof Currencies;
+
+/**
+ * The Tafgeet constructor's currency parameter accepts:
+ *   - a known CurrencyCode      — IDE autocompletes all valid codes
+ *   - `''` (empty string)       — no-currency mode (number only)
+ *   - any other string          — accepted for forward compatibility,
+ *                                 but the runtime validator will reject
+ *                                 anything not registered in `currencies`
+ *
+ * The `(string & {})` intersection is a deliberate TypeScript trick that
+ * preserves autocomplete for the literal union while still permitting
+ * arbitrary string inputs (see microsoft/TypeScript#29729).
+ */
+export type CurrencyInput = CurrencyCode | '' | (string & {});
