@@ -33,8 +33,23 @@ const stringText = new Tafgeet(55000051000.2, 'EGP').parse();
 - AUD (Australian Dollar)
 - TRY (Turkish Lira)
 
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for release notes. Highlights of **v1.1.0**:
+
+- **3.5–4.7× faster** across all input sizes
+- **52% smaller** install size (test files no longer published)
+- **Bug fixes** for issues [#7](https://github.com/omar-ehab/tafgeet-arabic/issues/7), [#8](https://github.com/omar-ehab/tafgeet-arabic/issues/8), and the fraction singular/plural rule
+- **KWD (Kuwaiti Dinar)** currency added
+- **Input validation** — bad input throws typed errors instead of silent garbage
+- **TypeScript types** ship in the package and are re-exported from the entry point
+
+## Requirements
+
+- Node.js **≥ 18.18.0**
+
 ## TODOs
 
 - Support more currencies
-- Better grammar support
+- Better grammar support (native-speaker review of dictionaries; classical inflection)
 - ~~Add test cases~~
