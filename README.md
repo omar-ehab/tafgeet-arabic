@@ -27,6 +27,7 @@ const stringText = new Tafgeet(55000051000.2, 'EGP').parse();
 - QAR (Qatari Riyal)
 - AED (Emarati Dirham)
 - EGP (Egyptian Pound) - *Default*
+- KWD (Kuwaiti Dinar)
 - USD (US Dollar)
 - TND (Tunisian Dinar)
 - AUD (Australian Dollar)

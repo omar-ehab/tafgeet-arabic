@@ -4,6 +4,7 @@ export interface Currencies {
   QAR: Currency;
   AED: Currency;
   EGP: Currency;
+  KWD: Currency;
   USD: Currency;
   AUD: Currency;
   TND: Currency;

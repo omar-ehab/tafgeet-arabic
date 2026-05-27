@@ -276,6 +276,73 @@ describe('Reading full amounts', () => {
   });
 });
 
+describe('KWD (Kuwaiti Dinar — 3 decimals, originally proposed in PR #3)', () => {
+  // Integer amounts — exercises singular/dual/plural for the currency word.
+  it('should read KWD 1', () => {
+    assert.equal('واحد دينار كويتي فقط لا غير', new Tafgeet('1', 'KWD').parse());
+  });
+  it('should read KWD 2', () => {
+    assert.equal('ٱثنين دينار كويتي فقط لا غير', new Tafgeet('2', 'KWD').parse());
+  });
+  it('should read KWD 3 (plural)', () => {
+    assert.equal('ثلاثة دنانير كويتية فقط لا غير', new Tafgeet('3', 'KWD').parse());
+  });
+  it('should read KWD 10 (plural)', () => {
+    assert.equal('عشرة دنانير كويتية فقط لا غير', new Tafgeet('10', 'KWD').parse());
+  });
+  it('should read KWD 11 (singular)', () => {
+    assert.equal('أحد عشر دينار كويتي فقط لا غير', new Tafgeet('11', 'KWD').parse());
+  });
+
+  // Fractions — 3-decimal currency. The fraction-plural rule applies to
+  // the FRACTION value (3–10 fils → فلوس, otherwise فلس).
+  it('should read KWD 1.001 (1 fils)', () => {
+    assert.equal('واحد دينار كويتي وواحد فلس فقط لا غير', new Tafgeet('1.001', 'KWD').parse());
+  });
+  it('should read KWD 1.005 (5 fils — plural)', () => {
+    assert.equal('واحد دينار كويتي وخمسة فلوس فقط لا غير', new Tafgeet('1.005', 'KWD').parse());
+  });
+  // This is the case PR #3 marked as it.skip — it now passes unchanged,
+  // because the fraction-plural fix (PR #10) gates on the fraction value.
+  it('should read KWD 1.010 (10 fils — plural, previously skipped in PR #3)', () => {
+    assert.equal('واحد دينار كويتي وعشرة فلوس فقط لا غير', new Tafgeet('1.010', 'KWD').parse());
+  });
+  it('should read KWD 1.100 (100 fils — singular)', () => {
+    assert.equal('واحد دينار كويتي ومائة فلس فقط لا غير', new Tafgeet('1.100', 'KWD').parse());
+  });
+  it('should read KWD 2.500 (500 fils — singular)', () => {
+    assert.equal('ٱثنين دينار كويتي وخمسمائة فلس فقط لا غير', new Tafgeet('2.500', 'KWD').parse());
+  });
+
+  // 3-decimal precision is preserved (vs SDG which truncates the 3rd).
+  it('should read KWD 123.456 (3-decimal precision)', () => {
+    assert.equal(
+      'مائة وثلاثة وعشرون دينار كويتي وأربعمائة وستة وخمسون فلس فقط لا غير',
+      new Tafgeet('123.456', 'KWD').parse(),
+    );
+  });
+
+  // Large amounts — exercises thousands/millions/billions with KWD.
+  it('should read KWD 1,000', () => {
+    assert.equal('ألف دينار كويتي فقط لا غير', new Tafgeet('1000', 'KWD').parse());
+  });
+  it('should read KWD 1,000,000', () => {
+    assert.equal('مليون دينار كويتي فقط لا غير', new Tafgeet('1000000', 'KWD').parse());
+  });
+  it('should read KWD 1,100,000 (issue #8 fix still applies for KWD)', () => {
+    assert.equal('مليون ومائة ألف دينار كويتي فقط لا غير', new Tafgeet('1100000', 'KWD').parse());
+  });
+  it('should read KWD 1,000,000,000', () => {
+    assert.equal('مليار دينار كويتي فقط لا غير', new Tafgeet('1000000000', 'KWD').parse());
+  });
+  it('should read KWD 1,234,567.890 (mixed, large + 3-decimal fraction)', () => {
+    assert.equal(
+      'مليون ومائتين وأربعة وثلاثون ألف وخمسمائة وسبعة وستون دينار كويتي وثمانمائة وتسعون فلس فقط لا غير',
+      new Tafgeet('1234567.890', 'KWD').parse(),
+    );
+  });
+});
+
 describe('Input validation (1.1.0)', () => {
   describe('rejects with TypeError', () => {
     it('null amount', () => {
@@ -339,7 +406,7 @@ describe('Input validation (1.1.0)', () => {
     it('throws with helpful list of supported codes', () => {
       assert.throws(
         () => new Tafgeet(5, 'XYZ'),
-        /unknown currency "XYZ"\. Supported: SDG, SAR, QAR, AED, EGP, USD, AUD, TND, TRY/,
+        /unknown currency "XYZ"\. Supported: SDG, SAR, QAR, AED, EGP, KWD, USD, AUD, TND, TRY/,
       );
     });
   });
