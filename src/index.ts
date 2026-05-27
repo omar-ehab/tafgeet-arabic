@@ -1,4 +1,16 @@
-import { columns, currencies } from './constants';
+import {
+  BILLIONS,
+  COLUMN_PROPERTIES,
+  columns,
+  currencies,
+  HUNDREDS,
+  MILLIONS,
+  ONES,
+  TEENS,
+  TENS,
+  THOUSANDS,
+  TRILLIONS,
+} from './constants';
 import { NumberProperties } from './interfaces/NumberProperties';
 
 export class Tafgeet {
@@ -6,104 +18,47 @@ export class Tafgeet {
   private splitted: string[];
   private fraction: number;
   private digit: number;
-  private ones;
-  private teens;
-  private tens;
-  private hundreds;
-  private thousands: NumberProperties;
-  private millions: NumberProperties;
-  private billions: NumberProperties;
-  private trillions: NumberProperties;
+
+  // Kept for backward compatibility with anyone reaching into private
+  // state — these now reference the shared module-level dictionaries
+  // rather than per-instance allocations.
+  private ones = ONES;
+  private teens = TEENS;
+  private tens = TENS;
+  private hundreds = HUNDREDS;
+  private thousands: NumberProperties = THOUSANDS;
+  private millions: NumberProperties = MILLIONS;
+  private billions: NumberProperties = BILLIONS;
+  private trillions: NumberProperties = TRILLIONS;
 
   constructor(digit: string | number, currency: string = 'EGP') {
     Tafgeet.validateInput(digit, currency);
     this.currency = currency;
     this.splitted = digit.toString().split('.');
     this.digit = parseInt(this.splitted[0], 10);
-    this.fraction = 0;
-    this.ones = {
-      _1: 'واحد',
-      _2: 'ٱثنين',
-      _3: 'ثلاثة',
-      _4: 'أربعة',
-      _5: 'خمسة',
-      _6: 'ستة',
-      _7: 'سبعة',
-      _8: 'ثمانية',
-      _9: 'تسعة',
-    };
-    this.teens = {
-      _11: 'أحد عشر',
-      _12: 'أثني عشر',
-      _13: 'ثلاثة عشر',
-      _14: 'أربعة عشر',
-      _15: 'خمسة عشر',
-      _16: 'ستة عشر',
-      _17: 'سبعة عشر',
-      _18: 'ثمانية عشر',
-      _19: 'تسعة عشر',
-    };
-    this.tens = {
-      _10: 'عشرة',
-      _20: 'عشرون',
-      _30: 'ثلاثون',
-      _40: 'أربعون',
-      _50: 'خمسون',
-      _60: 'ستون',
-      _70: 'سبعون',
-      _80: 'ثمانون',
-      _90: 'تسعون',
-    };
-    this.hundreds = {
-      _100: 'مائة',
-      _200: 'مائتين',
-      _300: 'ثلاثمائة',
-      _400: 'أربعمائة',
-      _500: 'خمسمائة',
-      _600: 'ستمائة',
-      _700: 'سبعمائة',
-      _800: 'ثمانمائة',
-      _900: 'تسعمائة',
-    };
-    this.thousands = {
-      singular: 'ألف',
-      binary: 'ألفين',
-      plural: 'ألآف',
-    };
-    this.millions = {
-      singular: 'مليون',
-      binary: 'مليونين',
-      plural: 'ملايين',
-    };
-    this.billions = {
-      singular: 'مليار',
-      binary: 'مليارين',
-      plural: 'مليارات',
-    };
-    this.trillions = {
-      singular: 'ترليون',
-      binary: 'ترليونين',
-      plural: 'ترليونات',
-    };
-    let fraction: string | number;
-    if (this.splitted.length > 1) {
-      if (this.splitted[1].length > 1) {
-        fraction = parseInt(this.splitted[1], 10);
-        if (fraction >= 1 && fraction <= 99) {
-          this.fraction = this.splitted[1].length === 1 ? fraction * 10 : fraction;
-        } else {
-          // trim it
-          const trimmed = this.splitted[1].split('');
-          fraction = '';
-          for (let index = 0; index < currencies[currency as keyof typeof currencies].decimals; index++) {
-            fraction += trimmed[index];
-          }
-          this.fraction = parseInt(fraction, 10);
-        }
-      } else {
-        this.fraction = parseInt(this.splitted[1], 10);
-      }
-    }
+    this.fraction = this.parseFraction(this.splitted[1], currency);
+  }
+
+  /**
+   * Parses the fractional portion of the amount.
+   *
+   *   undefined / ""    -> 0
+   *   1 digit  ("2")    -> 2           (literal, no padding — historical
+   *                                     behavior preserved for backward
+   *                                     compatibility; "1.2 EGP" still
+   *                                     renders as "1 pound and 2 piaster",
+   *                                     not "20 piaster")
+   *   2 digits ("20")   -> 20
+   *   3+ digits         -> truncated to the currency's decimals count
+   *                        ("1.999 SDG"  -> 99,  decimals=2)
+   *                        ("1.456 TND"  -> 456, decimals=3)
+   */
+  private parseFraction(fracStr: string | undefined, currency: string): number {
+    if (!fracStr) return 0;
+    if (fracStr.length <= 2) return parseInt(fracStr, 10);
+
+    const decimals = currencies[currency as keyof typeof currencies]?.decimals ?? 2;
+    return parseInt(fracStr.slice(0, decimals), 10);
   }
 
   /**
@@ -147,14 +102,15 @@ export class Tafgeet {
       normalized = trimmed;
     }
 
-    const intPart = parseInt(normalized.split('.')[0], 10);
+    const intPartStr = normalized.split('.')[0];
+    const intPart = parseInt(intPartStr, 10);
     if (intPart < 1) {
       // Amounts < 1 (e.g. "0", "0.5") are not supported in 1.x — the
       // dictionaries have no "صفر" entry and the column logic assumes
       // at least one integer digit. Tracked as a future enhancement.
       throw new RangeError(`Tafgeet: integer part must be >= 1, got "${normalized}"`);
     }
-    if (normalized.split('.')[0].length >= 16) {
+    if (intPartStr.length >= 16) {
       throw new RangeError(`Tafgeet: integer part must be < 16 digits, got "${normalized}"`);
     }
 
@@ -167,91 +123,62 @@ export class Tafgeet {
     }
   }
 
-  parse() {
-    const serialized: string[][] = [];
-    let tmp: string[] = [];
-    let inc = 1;
-    const count = this.length();
-    let columnIdx = this.getColumnIndex();
-    if (count >= 16) {
+  /**
+   * Renders the amount as Arabic words, including the currency suffix
+   * and the closing فقط لا غير.
+   *
+   * @throws {Error} if the integer part is 16+ digits (kept for backward
+   *   compatibility — the constructor's stricter validation now catches
+   *   this earlier, so this branch is unreachable from current API use).
+   */
+  parse(): string {
+    const intStr = this.digit.toString();
+    if (intStr.length >= 16) {
       throw new Error('Number out of range!');
-    }
-    // Sperate the number into columns
-    Array.from(this.digit.toString())
-      .reverse()
-      .forEach((d, i) => {
-        tmp.push(d);
-        if (inc === 3) {
-          serialized.unshift(tmp);
-          tmp = [];
-          inc = 0;
-        }
-        if (inc === 0 && count - (i + 1) < 3 && count - (i + 1) !== 0) {
-          serialized.unshift(tmp);
-        }
-        inc++;
-      });
-
-    // Generate concatenation array
-    const concats: string[] = [];
-    for (let i = this.getColumnIndex(); i < columns.length; i++) {
-      concats[i] = ' و';
-    }
-
-    // Suppress the "و" connector that would precede a trailing zero group.
-    // serialized[i] corresponds to column (startCol + i); the connector emitted
-    // AFTER that column lives in concats[startCol + i]. The connector that
-    // would INTRODUCE serialized[i] lives at concats[startCol + i - 1].
-    // For each trailing zero group, clear the connector that would have led to it.
-    if (this.digit > 999) {
-      const startCol = this.getColumnIndex();
-      for (let i = serialized.length - 1; i >= 1; i--) {
-        if (parseInt(serialized[i].join(''), 10) !== 0) {
-          break;
-        }
-        const connectorCol = startCol + i - 1;
-        if (connectorCol >= 0 && connectorCol < concats.length) {
-          concats[connectorCol] = '';
-        }
-      }
     }
 
     let str = '';
 
-    if (this.length() >= 1 && this.length() <= 3) {
+    // 1–3 digit amounts have no thousands/millions/etc. column at all.
+    if (intStr.length <= 3) {
       str += this.read(this.digit);
     } else {
-      for (const element of serialized) {
-        const joinedNumber = parseInt(element.reverse().join(''), 10);
-        if (joinedNumber === 0) {
-          columnIdx++;
-          continue;
-        }
-        if (columnIdx === null || columnIdx + 1 > columns.length) {
-          str += this.read(joinedNumber);
-        } else {
-          str += this.addSuffixPrefix(element, columnIdx) + concats[columnIdx];
-        }
-        columnIdx++;
+      // Split into 3-digit groups, head-first (e.g. "1234567" -> [1, 234, 567]).
+      const startCol = this.getColumnIndex();
+      const headLen = intStr.length % 3 === 0 ? 3 : intStr.length % 3;
+      const groups: number[] = [parseInt(intStr.slice(0, headLen), 10)];
+      for (let i = headLen; i < intStr.length; i += 3) {
+        groups.push(parseInt(intStr.slice(i, i + 3), 10));
       }
+
+      // groups[i] corresponds to column (startCol + i). The final group
+      // can land at column index >= columns.length — that's the "ones"
+      // position and gets rendered without a suffix.
+      // Join non-zero parts with " و"; the trailing-zero cleanup is
+      // implicit because we only emit non-zero groups.
+      const rendered: string[] = [];
+      for (let i = 0; i < groups.length; i++) {
+        if (groups[i] === 0) continue;
+        const colIdx = startCol + i;
+        if (colIdx >= columns.length) {
+          rendered.push(this.read(groups[i]));
+        } else {
+          rendered.push(this.addSuffixForGroup(groups[i], colIdx));
+        }
+      }
+      str += rendered.join(' و');
     }
 
     if (this.currency !== '') {
-      if (this.digit >= 3 && this.digit <= 10) {
-        str += ' ' + currencies[this.currency as keyof typeof currencies].plural;
-      } else {
-        str += ' ' + currencies[this.currency as keyof typeof currencies].singular;
-      }
+      const cur = currencies[this.currency as keyof typeof currencies];
+      str += ' ' + (this.digit >= 3 && this.digit <= 10 ? cur.plural : cur.singular);
       if (this.fraction !== 0) {
         // Plural-vs-singular for the FRACTION word depends on the FRACTION
         // value (3–10 → broken plural in Arabic), not on the integer part.
         // Pre-1.1.0 this incorrectly gated on `this.digit`, so e.g.
         // `1.05 EGP` returned "...وخمسة قرش" instead of "...وخمسة قروش".
-        if (this.fraction >= 3 && this.fraction <= 10) {
-          str += ' و' + this.read(this.fraction) + ' ' + currencies[this.currency as keyof typeof currencies].fractions;
-        } else {
-          str += ' و' + this.read(this.fraction) + ' ' + currencies[this.currency as keyof typeof currencies].fraction;
-        }
+        const fracWord = this.fraction >= 3 && this.fraction <= 10 ? cur.fractions : cur.fraction;
+        str += ' و' + this.read(this.fraction) + ' ' + fracWord;
       }
     }
 
@@ -259,107 +186,81 @@ export class Tafgeet {
     return str;
   }
 
-  read(d: number) {
-    let str = '';
-    const len = Array.from(d.toString()).length;
-    if (len === 1) {
-      str += this.readOnes(d);
-    } else if (len === 2) {
-      str += this.readTens(d);
-    } else if (len === 3) {
-      str += this.readHundreds(d);
+  /**
+   * Renders a value 0–999 as Arabic words (without any column/currency suffix).
+   * Exposed publicly for use as a low-level helper; for whole amounts, use
+   * `parse()` instead.
+   */
+  read(d: number): string {
+    if (d < 10) return this.readOnes(d) ?? '';
+    if (d < 100) return this.readTens(d) ?? '';
+    if (d < 1000) return this.readHundreds(d);
+    return '';
+  }
+
+  private length(): number {
+    return this.digit.toString().length;
+  }
+
+  // Maps digit-count -> starting column index.
+  // 1–3 digits: hundreds-only (handled separately in parse(), returns 0).
+  // 4–6 digits: thousands (column 3).
+  // 7–9 digits: millions (column 2).
+  // 10–12 digits: billions (column 1).
+  // 13–15 digits: trillions (column 0).
+  private getColumnIndex(): number {
+    const len = this.length();
+    if (len <= 3) return 0;
+    if (len <= 6) return 3;
+    if (len <= 9) return 2;
+    if (len <= 12) return 1;
+    return 0;
+  }
+
+  private readOnes(d: number): string | undefined {
+    if (d === 0) return undefined;
+    return ONES[d];
+  }
+
+  private readTens(d: number): string | undefined {
+    const onesDigit = d % 10;
+    const tensDigit = Math.floor(d / 10);
+    if (onesDigit === 0) return TENS[d];
+    if (d > 10 && d < 20) return TEENS[d];
+    if (d > 19 && d < 100) return ONES[onesDigit] + ' و' + TENS[tensDigit * 10];
+    return undefined;
+  }
+
+  private readHundreds(d: number): string {
+    const hundredsDigit = Math.floor(d / 100);
+    const lastTwo = d % 100;
+    const tensDigit = Math.floor(lastTwo / 10);
+    const onesDigit = lastTwo % 10;
+
+    let str = HUNDREDS[hundredsDigit * 100];
+    if (tensDigit === 0 && onesDigit !== 0) {
+      str += ' و' + ONES[onesDigit];
+    } else if (tensDigit !== 0) {
+      str += ' و' + this.readTens(lastTwo);
     }
     return str;
   }
 
-  private length() {
-    return Array.from(this.digit.toString()).length;
-  }
-
-  private getColumnIndex() {
-    let column = 0;
-    if (this.length() > 12) {
-      column = 0;
-    } else if (this.length() <= 12 && this.length() > 9) {
-      column = 1;
-    } else if (this.length() <= 9 && this.length() > 6) {
-      column = 2;
-    } else if (this.length() <= 6 && this.length() >= 4) {
-      column = 3;
-    }
-    return column;
-  }
-
-  private readOnes(d: number) {
-    if (d === 0) return;
-    return this.ones[('_' + d.toString()) as keyof typeof this.ones];
-  }
-
-  private readTens(d: number) {
-    if (Array.from(d.toString())[1] === '0') {
-      return this.tens[('_' + d.toString()) as keyof typeof this.tens];
-    }
-    if (d > 10 && d < 20) {
-      return this.teens[('_' + d.toString()) as keyof typeof this.teens];
-    }
-    if (d > 19 && d < 100 && Array.from(d.toString())[1] !== '0') {
-      return (
-        this.readOnes(parseInt(Array.from(d.toString())[1], 10)) +
-        ' و' +
-        this.tens[('_' + Array.from(d.toString())[0] + '0') as keyof typeof this.tens]
-      );
-    }
-  }
-
-  private readHundreds(d: number) {
-    let str = '';
-    str += this.hundreds[('_' + Array.from(d.toString())[0] + '00') as keyof typeof this.hundreds];
-
-    if (Array.from(d.toString())[1] === '0' && Array.from(d.toString())[2] !== '0') {
-      str += ' و' + this.readOnes(parseInt(Array.from(d.toString())[2], 10));
-    }
-
-    if (Array.from(d.toString())[1] !== '0') {
-      str += ' و' + this.readTens(parseInt((Array.from(d.toString())[1] + Array.from(d.toString())[2]).toString(), 10));
-    }
-    return str;
-  }
-
-  private addSuffixPrefix(arr: string[], columnIdx: number) {
-    const columnConstant = this.getColumnConstantByColumnIdx(columnIdx);
-    if (arr.length === 1) {
-      if (parseInt(arr[0], 10) === 1) {
-        if (columnConstant) return columnConstant.singular;
-      }
-      if (parseInt(arr[0], 10) === 2) {
-        if (columnConstant) return columnConstant.binary;
-      }
-      if (parseInt(arr[0], 10) > 2 && parseInt(arr[0], 10) <= 9) {
-        if (columnConstant) return `${this.readOnes(parseInt(arr[0], 10))} ${columnConstant.plural}`;
-      }
-    } else {
-      const joinedNumber = parseInt(arr.join(''), 10);
-      if (joinedNumber > 1) {
-        if (columnConstant) return `${this.read(joinedNumber)} ${columnConstant.singular}`;
-      } else {
-        if (columnConstant) return columnConstant.singular;
-      }
-    }
-  }
-
-  private getColumnConstantByColumnIdx(columnIdx: number) {
-    const colName = columns[columnIdx];
-    switch (colName) {
-      case 'trillions':
-        return this.trillions;
-      case 'billions':
-        return this.billions;
-      case 'millions':
-        return this.millions;
-      case 'thousands':
-        return this.thousands;
-      default:
-        return null;
-    }
+  /**
+   * Renders a single 1–999 group followed by its column suffix
+   * (ألف / مليون / مليار / ترليون), applying Arabic singular / dual /
+   * plural rules for the count:
+   *   1     -> singular (ألف)
+   *   2     -> dual     (ألفين)
+   *   3–9   -> count + plural (ثلاثة ألآف)
+   *   10+   -> rendered + singular (عشرة ألف)
+   */
+  private addSuffixForGroup(value: number, columnIdx: number): string {
+    const props = COLUMN_PROPERTIES[columns[columnIdx]];
+    if (!props) return this.read(value);
+    if (value === 1) return props.singular;
+    if (value === 2) return props.binary;
+    if (value >= 3 && value <= 9) return `${ONES[value]} ${props.plural}`;
+    return `${this.read(value)} ${props.singular}`;
   }
 }
