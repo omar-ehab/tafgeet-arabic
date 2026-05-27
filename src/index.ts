@@ -212,66 +212,62 @@ export class Tafgeet {
     return str;
   }
 
-  read(d: number) {
-    let str = '';
-    const len = Array.from(d.toString()).length;
-    if (len === 1) {
-      str += this.readOnes(d);
-    } else if (len === 2) {
-      str += this.readTens(d);
-    } else if (len === 3) {
-      str += this.readHundreds(d);
-    }
-    return str;
+  /**
+   * Renders a value 0–999 as Arabic words (without any column/currency suffix).
+   * Exposed publicly for use as a low-level helper; for whole amounts, use
+   * `parse()` instead.
+   */
+  read(d: number): string {
+    if (d < 10) return this.readOnes(d) ?? '';
+    if (d < 100) return this.readTens(d) ?? '';
+    if (d < 1000) return this.readHundreds(d);
+    return '';
   }
 
-  private length() {
-    return Array.from(this.digit.toString()).length;
+  private length(): number {
+    return this.digit.toString().length;
   }
 
-  private getColumnIndex() {
-    let column = 0;
-    if (this.length() > 12) {
-      column = 0;
-    } else if (this.length() <= 12 && this.length() > 9) {
-      column = 1;
-    } else if (this.length() <= 9 && this.length() > 6) {
-      column = 2;
-    } else if (this.length() <= 6 && this.length() >= 4) {
-      column = 3;
-    }
-    return column;
+  // Maps digit-count -> starting column index.
+  // 1–3 digits: hundreds-only (handled separately in parse(), returns 0).
+  // 4–6 digits: thousands (column 3).
+  // 7–9 digits: millions (column 2).
+  // 10–12 digits: billions (column 1).
+  // 13–15 digits: trillions (column 0).
+  private getColumnIndex(): number {
+    const len = this.length();
+    if (len <= 3) return 0;
+    if (len <= 6) return 3;
+    if (len <= 9) return 2;
+    if (len <= 12) return 1;
+    return 0;
   }
 
   private readOnes(d: number): string | undefined {
-    if (d === 0) return;
+    if (d === 0) return undefined;
     return ONES[d];
   }
 
   private readTens(d: number): string | undefined {
-    if (Array.from(d.toString())[1] === '0') {
-      return TENS[d];
-    }
-    if (d > 10 && d < 20) {
-      return TEENS[d];
-    }
-    if (d > 19 && d < 100 && Array.from(d.toString())[1] !== '0') {
-      const tensDigit = parseInt(Array.from(d.toString())[0], 10);
-      const onesDigit = parseInt(Array.from(d.toString())[1], 10);
-      return this.readOnes(onesDigit) + ' و' + TENS[tensDigit * 10];
-    }
+    const onesDigit = d % 10;
+    const tensDigit = Math.floor(d / 10);
+    if (onesDigit === 0) return TENS[d];
+    if (d > 10 && d < 20) return TEENS[d];
+    if (d > 19 && d < 100) return ONES[onesDigit] + ' و' + TENS[tensDigit * 10];
+    return undefined;
   }
 
   private readHundreds(d: number): string {
-    const hundredsDigit = parseInt(Array.from(d.toString())[0], 10);
+    const hundredsDigit = Math.floor(d / 100);
+    const lastTwo = d % 100;
+    const tensDigit = Math.floor(lastTwo / 10);
+    const onesDigit = lastTwo % 10;
+
     let str = HUNDREDS[hundredsDigit * 100];
-
-    if (Array.from(d.toString())[1] === '0' && Array.from(d.toString())[2] !== '0') {
-      str += ' و' + this.readOnes(parseInt(Array.from(d.toString())[2], 10));
-    }
-
-    if (Array.from(d.toString())[1] !== '0') {
-      str += ' و' + this.readTens(parseInt(Array.from(d.toString())[1] + Array.from(d.toString())[2], 10));
+    if (tensDigit === 0 && onesDigit !== 0) {
+      str += ' و' + ONES[onesDigit];
+    } else if (tensDigit !== 0) {
+      str += ' و' + this.readTens(lastTwo);
     }
     return str;
   }
