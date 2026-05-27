@@ -1,4 +1,16 @@
-import { columns, currencies } from './constants';
+import {
+  BILLIONS,
+  COLUMN_PROPERTIES,
+  columns,
+  currencies,
+  HUNDREDS,
+  MILLIONS,
+  ONES,
+  TEENS,
+  TENS,
+  THOUSANDS,
+  TRILLIONS,
+} from './constants';
 import { NumberProperties } from './interfaces/NumberProperties';
 
 export class Tafgeet {
@@ -6,14 +18,18 @@ export class Tafgeet {
   private splitted: string[];
   private fraction: number;
   private digit: number;
-  private ones;
-  private teens;
-  private tens;
-  private hundreds;
-  private thousands: NumberProperties;
-  private millions: NumberProperties;
-  private billions: NumberProperties;
-  private trillions: NumberProperties;
+
+  // Kept for backward compatibility with anyone reaching into private
+  // state — these now reference the shared module-level dictionaries
+  // rather than per-instance allocations.
+  private ones = ONES;
+  private teens = TEENS;
+  private tens = TENS;
+  private hundreds = HUNDREDS;
+  private thousands: NumberProperties = THOUSANDS;
+  private millions: NumberProperties = MILLIONS;
+  private billions: NumberProperties = BILLIONS;
+  private trillions: NumberProperties = TRILLIONS;
 
   constructor(digit: string | number, currency: string = 'EGP') {
     Tafgeet.validateInput(digit, currency);
@@ -21,70 +37,6 @@ export class Tafgeet {
     this.splitted = digit.toString().split('.');
     this.digit = parseInt(this.splitted[0], 10);
     this.fraction = 0;
-    this.ones = {
-      _1: 'واحد',
-      _2: 'ٱثنين',
-      _3: 'ثلاثة',
-      _4: 'أربعة',
-      _5: 'خمسة',
-      _6: 'ستة',
-      _7: 'سبعة',
-      _8: 'ثمانية',
-      _9: 'تسعة',
-    };
-    this.teens = {
-      _11: 'أحد عشر',
-      _12: 'أثني عشر',
-      _13: 'ثلاثة عشر',
-      _14: 'أربعة عشر',
-      _15: 'خمسة عشر',
-      _16: 'ستة عشر',
-      _17: 'سبعة عشر',
-      _18: 'ثمانية عشر',
-      _19: 'تسعة عشر',
-    };
-    this.tens = {
-      _10: 'عشرة',
-      _20: 'عشرون',
-      _30: 'ثلاثون',
-      _40: 'أربعون',
-      _50: 'خمسون',
-      _60: 'ستون',
-      _70: 'سبعون',
-      _80: 'ثمانون',
-      _90: 'تسعون',
-    };
-    this.hundreds = {
-      _100: 'مائة',
-      _200: 'مائتين',
-      _300: 'ثلاثمائة',
-      _400: 'أربعمائة',
-      _500: 'خمسمائة',
-      _600: 'ستمائة',
-      _700: 'سبعمائة',
-      _800: 'ثمانمائة',
-      _900: 'تسعمائة',
-    };
-    this.thousands = {
-      singular: 'ألف',
-      binary: 'ألفين',
-      plural: 'ألآف',
-    };
-    this.millions = {
-      singular: 'مليون',
-      binary: 'مليونين',
-      plural: 'ملايين',
-    };
-    this.billions = {
-      singular: 'مليار',
-      binary: 'مليارين',
-      plural: 'مليارات',
-    };
-    this.trillions = {
-      singular: 'ترليون',
-      binary: 'ترليونين',
-      plural: 'ترليونات',
-    };
     let fraction: string | number;
     if (this.splitted.length > 1) {
       if (this.splitted[1].length > 1) {
@@ -147,14 +99,15 @@ export class Tafgeet {
       normalized = trimmed;
     }
 
-    const intPart = parseInt(normalized.split('.')[0], 10);
+    const intPartStr = normalized.split('.')[0];
+    const intPart = parseInt(intPartStr, 10);
     if (intPart < 1) {
       // Amounts < 1 (e.g. "0", "0.5") are not supported in 1.x — the
       // dictionaries have no "صفر" entry and the column logic assumes
       // at least one integer digit. Tracked as a future enhancement.
       throw new RangeError(`Tafgeet: integer part must be >= 1, got "${normalized}"`);
     }
-    if (normalized.split('.')[0].length >= 16) {
+    if (intPartStr.length >= 16) {
       throw new RangeError(`Tafgeet: integer part must be < 16 digits, got "${normalized}"`);
     }
 
@@ -210,7 +163,7 @@ export class Tafgeet {
           break;
         }
         const connectorCol = startCol + i - 1;
-        if (connectorCol >= 0 && connectorCol < concats.length) {
+        if (connectorCol >= 0 && connectorCol < columns.length) {
           concats[connectorCol] = '';
         }
       }
@@ -227,7 +180,7 @@ export class Tafgeet {
           columnIdx++;
           continue;
         }
-        if (columnIdx === null || columnIdx + 1 > columns.length) {
+        if (columnIdx + 1 > columns.length) {
           str += this.read(joinedNumber);
         } else {
           str += this.addSuffixPrefix(element, columnIdx) + concats[columnIdx];
@@ -290,76 +243,58 @@ export class Tafgeet {
     return column;
   }
 
-  private readOnes(d: number) {
+  private readOnes(d: number): string | undefined {
     if (d === 0) return;
-    return this.ones[('_' + d.toString()) as keyof typeof this.ones];
+    return ONES[d];
   }
 
-  private readTens(d: number) {
+  private readTens(d: number): string | undefined {
     if (Array.from(d.toString())[1] === '0') {
-      return this.tens[('_' + d.toString()) as keyof typeof this.tens];
+      return TENS[d];
     }
     if (d > 10 && d < 20) {
-      return this.teens[('_' + d.toString()) as keyof typeof this.teens];
+      return TEENS[d];
     }
     if (d > 19 && d < 100 && Array.from(d.toString())[1] !== '0') {
-      return (
-        this.readOnes(parseInt(Array.from(d.toString())[1], 10)) +
-        ' و' +
-        this.tens[('_' + Array.from(d.toString())[0] + '0') as keyof typeof this.tens]
-      );
+      const tensDigit = parseInt(Array.from(d.toString())[0], 10);
+      const onesDigit = parseInt(Array.from(d.toString())[1], 10);
+      return this.readOnes(onesDigit) + ' و' + TENS[tensDigit * 10];
     }
   }
 
-  private readHundreds(d: number) {
-    let str = '';
-    str += this.hundreds[('_' + Array.from(d.toString())[0] + '00') as keyof typeof this.hundreds];
+  private readHundreds(d: number): string {
+    const hundredsDigit = parseInt(Array.from(d.toString())[0], 10);
+    let str = HUNDREDS[hundredsDigit * 100];
 
     if (Array.from(d.toString())[1] === '0' && Array.from(d.toString())[2] !== '0') {
       str += ' و' + this.readOnes(parseInt(Array.from(d.toString())[2], 10));
     }
 
     if (Array.from(d.toString())[1] !== '0') {
-      str += ' و' + this.readTens(parseInt((Array.from(d.toString())[1] + Array.from(d.toString())[2]).toString(), 10));
+      str += ' و' + this.readTens(parseInt(Array.from(d.toString())[1] + Array.from(d.toString())[2], 10));
     }
     return str;
   }
 
-  private addSuffixPrefix(arr: string[], columnIdx: number) {
+  private addSuffixPrefix(arr: string[], columnIdx: number): string | undefined {
     const columnConstant = this.getColumnConstantByColumnIdx(columnIdx);
+    if (!columnConstant) return undefined;
     if (arr.length === 1) {
-      if (parseInt(arr[0], 10) === 1) {
-        if (columnConstant) return columnConstant.singular;
-      }
-      if (parseInt(arr[0], 10) === 2) {
-        if (columnConstant) return columnConstant.binary;
-      }
-      if (parseInt(arr[0], 10) > 2 && parseInt(arr[0], 10) <= 9) {
-        if (columnConstant) return `${this.readOnes(parseInt(arr[0], 10))} ${columnConstant.plural}`;
-      }
-    } else {
-      const joinedNumber = parseInt(arr.join(''), 10);
-      if (joinedNumber > 1) {
-        if (columnConstant) return `${this.read(joinedNumber)} ${columnConstant.singular}`;
-      } else {
-        if (columnConstant) return columnConstant.singular;
-      }
+      const v = parseInt(arr[0], 10);
+      if (v === 1) return columnConstant.singular;
+      if (v === 2) return columnConstant.binary;
+      if (v > 2 && v <= 9) return `${this.readOnes(v)} ${columnConstant.plural}`;
+      return undefined;
     }
+    const joinedNumber = parseInt(arr.join(''), 10);
+    if (joinedNumber > 1) {
+      return `${this.read(joinedNumber)} ${columnConstant.singular}`;
+    }
+    return columnConstant.singular;
   }
 
-  private getColumnConstantByColumnIdx(columnIdx: number) {
+  private getColumnConstantByColumnIdx(columnIdx: number): NumberProperties | null {
     const colName = columns[columnIdx];
-    switch (colName) {
-      case 'trillions':
-        return this.trillions;
-      case 'billions':
-        return this.billions;
-      case 'millions':
-        return this.millions;
-      case 'thousands':
-        return this.thousands;
-      default:
-        return null;
-    }
+    return COLUMN_PROPERTIES[colName] ?? null;
   }
 }
