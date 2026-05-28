@@ -19,7 +19,7 @@ import { Tafgeet } from '../src';
  * Then review the snapshot diff carefully before committing.
  *
  * Coverage matrix:
- *   - 10 supported currencies
+ *   - 24 supported currencies
  *   - Canonical numbers spanning every magnitude (1..1e12+)
  *   - The boundary numbers from the v1.2 spec
  *     (0, 1, 2, 3, 10, 11, 12, 20, 21, 99, 100, 101, 102, 111,
@@ -39,9 +39,53 @@ interface SnapshotEntry {
 
 // -- Input matrix -----------------------------------------------------------
 
-const ALL_CURRENCIES = ['EGP', 'SAR', 'QAR', 'AED', 'KWD', 'USD', 'AUD', 'SDG', 'TND', 'TRY'] as const;
-const TWO_DECIMAL_CURRENCIES = ['EGP', 'SAR', 'QAR', 'AED', 'USD', 'AUD', 'SDG', 'TRY'] as const;
-const THREE_DECIMAL_CURRENCIES = ['KWD', 'TND'] as const;
+// Alphabetical — matches SUPPORTED_CURRENCIES.
+const ALL_CURRENCIES = [
+  'AED',
+  'AUD',
+  'BHD',
+  'CAD',
+  'CHF',
+  'DZD',
+  'EGP',
+  'EUR',
+  'GBP',
+  'IQD',
+  'JOD',
+  'KWD',
+  'LBP',
+  'LYD',
+  'MAD',
+  'OMR',
+  'QAR',
+  'SAR',
+  'SDG',
+  'SYP',
+  'TND',
+  'TRY',
+  'USD',
+  'YER',
+] as const;
+const TWO_DECIMAL_CURRENCIES = [
+  'AED',
+  'AUD',
+  'CAD',
+  'CHF',
+  'DZD',
+  'EGP',
+  'EUR',
+  'GBP',
+  'LBP',
+  'MAD',
+  'QAR',
+  'SAR',
+  'SDG',
+  'SYP',
+  'TRY',
+  'USD',
+  'YER',
+] as const;
+const THREE_DECIMAL_CURRENCIES = ['BHD', 'IQD', 'JOD', 'KWD', 'LYD', 'OMR', 'TND'] as const;
 
 // Canonical magnitudes — covers every Arabic grammatical break:
 //   1 (singular), 2 (dual), 3-9 (broken plural), 10, 11-19 (teens),

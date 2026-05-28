@@ -4,11 +4,36 @@ import { SUPPORTED_CURRENCIES, Tafgeet, type CurrencyCode } from '../src';
 
 describe('CurrencyCode + SUPPORTED_CURRENCIES (1.2.0)', () => {
   describe('SUPPORTED_CURRENCIES runtime export', () => {
-    it('is an array of all 10 built-in codes', () => {
-      assert.lengthOf(SUPPORTED_CURRENCIES, 10);
+    it('is an array of all 24 built-in codes', () => {
+      assert.lengthOf(SUPPORTED_CURRENCIES, 24);
       assert.includeMembers(
         [...SUPPORTED_CURRENCIES],
-        ['EGP', 'SAR', 'QAR', 'AED', 'KWD', 'USD', 'AUD', 'SDG', 'TND', 'TRY'],
+        [
+          'EGP',
+          'SAR',
+          'QAR',
+          'AED',
+          'KWD',
+          'USD',
+          'AUD',
+          'SDG',
+          'TND',
+          'TRY',
+          'BHD',
+          'OMR',
+          'JOD',
+          'IQD',
+          'LYD',
+          'LBP',
+          'MAD',
+          'DZD',
+          'SYP',
+          'YER',
+          'EUR',
+          'GBP',
+          'CHF',
+          'CAD',
+        ],
       );
     });
 

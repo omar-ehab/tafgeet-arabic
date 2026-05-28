@@ -17,7 +17,7 @@ new Tafgeet('1234.56', 'EGP').parse();
 - 🛡 Typed error classes (`InvalidAmountError`, `AmountOutOfRangeError`, …) with discriminated `code` fields
 - 🔢 Accepts Latin, Arabic-Indic (`١٢٣`), Eastern Arabic-Indic (`۱۲۳`), commas, spaces, underscores
 - ➗ Configurable rounding (`'round'`, `'floor'`, `'ceil'`, `'bankers'`, `'truncate'`)
-- 🌍 10 currencies: EGP, SAR, QAR, AED, KWD, USD, AUD, SDG, TND, TRY
+- 🌍 24 currencies covering the Arab region plus major international codes (see the [full table](#supported-currencies))
 
 ## Requirements
 
@@ -288,18 +288,34 @@ Unknown option keys throw — including typos like `{ Rounding: 'round' }`. Stic
 
 ## Supported currencies
 
+24 currencies, sorted alphabetically by ISO code (matches `SUPPORTED_CURRENCIES`).
+
 | Code | Currency | Decimals |
 |---|---|---|
-| `EGP` *(default)* | Egyptian Pound — جنيه مصري | 2 |
-| `SAR` | Saudi Riyal — ريال سعودي | 2 |
-| `QAR` | Qatari Riyal — ريال قطري | 2 |
 | `AED` | Emarati Dirham — درهم أماراتي | 2 |
-| `KWD` | Kuwaiti Dinar — دينار كويتي | 3 |
-| `USD` | US Dollar — دولار أمريكي | 2 |
 | `AUD` | Australian Dollar — دولار أسترالي | 2 |
+| `BHD` | Bahraini Dinar — دينار بحريني | 3 |
+| `CAD` | Canadian Dollar — دولار كندي | 2 |
+| `CHF` | Swiss Franc — فرنك سويسري | 2 |
+| `DZD` | Algerian Dinar — دينار جزائري | 2 |
+| `EGP` *(default)* | Egyptian Pound — جنيه مصري | 2 |
+| `EUR` | Euro — يورو | 2 |
+| `GBP` | British Pound Sterling — جنيه إسترليني | 2 |
+| `IQD` | Iraqi Dinar — دينار عراقي | 3 |
+| `JOD` | Jordanian Dinar — دينار أردني | 3 |
+| `KWD` | Kuwaiti Dinar — دينار كويتي | 3 |
+| `LBP` | Lebanese Pound — ليرة لبنانية | 2 |
+| `LYD` | Libyan Dinar — دينار ليبي | 3 |
+| `MAD` | Moroccan Dirham — درهم مغربي | 2 |
+| `OMR` | Omani Rial — ريال عماني | 3 |
+| `QAR` | Qatari Riyal — ريال قطري | 2 |
+| `SAR` | Saudi Riyal — ريال سعودي | 2 |
 | `SDG` | Sudanese Pound — جنيه سوداني | 2 |
+| `SYP` | Syrian Pound — ليرة سورية | 2 |
 | `TND` | Tunisian Dinar — دينار تونسي | 3 |
 | `TRY` | Turkish Lira — ليرة تركية | 2 |
+| `USD` | US Dollar — دولار أمريكي | 2 |
+| `YER` | Yemeni Rial — ريال يمني | 2 |
 
 Missing a currency? [Open an issue](https://github.com/omar-ehab/tafgeet-arabic/issues/new) or send a PR.
 
@@ -307,7 +323,9 @@ Missing a currency? [Open an issue](https://github.com/omar-ehab/tafgeet-arabic/
 
 See [CHANGELOG.md](./CHANGELOG.md).
 
-**v1.2.1** (latest patch) — eight correctness and hardening fixes found across two audit passes. Most notably: `'1.5' EGP` now correctly renders 50 piasters (not 5); `Number.MAX_VALUE` and other exponential-notation numbers now throw instead of silently corrupting; rounding can now carry from `0.999` up to `1`; strict options validation catches typos. See the v1.2.1 entry in the CHANGELOG for the full list. No new APIs.
+**v1.3.0** (latest) — 14 new bundled currencies bring the total to 24: 10 Arab-region (BHD, OMR, JOD, IQD, LYD, LBP, MAD, DZD, SYP, YER) and 4 major international (EUR, GBP, CHF, CAD) for cross-border invoicing. No new APIs, no breaking changes.
+
+**v1.2.1** — eight correctness and hardening fixes found across two audit passes. Most notably: `'1.5' EGP` now correctly renders 50 piasters (not 5); `Number.MAX_VALUE` and other exponential-notation numbers now throw instead of silently corrupting; rounding can now carry from `0.999` up to `1`; strict options validation catches typos. See the v1.2.1 entry in the CHANGELOG for the full list. No new APIs.
 
 **v1.2.0** — dual ESM/CJS build, `CurrencyCode` union type, Arabic-Indic & thousands-separator input, typed error classes, `rounding` option, 262 snapshot tests.
 
@@ -315,8 +333,7 @@ See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Roadmap
 
-- **v1.3:** 14 more currencies (10 Arab-region + 4 international: BHD, OMR, JOD, IQD, LYD, LBP, MAD, DZD, SYP, YER, EUR, GBP, CHF, CAD)
-- **v1.4:** native-speaker grammar review of the Arabic dictionaries; grammar options (`feminine`, `accusative`); style modes — all pending native review
+- **v1.4:** native-speaker grammar review of the Arabic dictionaries (including the v1.3 currency strings); grammar options (`feminine`, `accusative`); style modes — all pending native review
 - Optional: functional API `tafgeet(amount, currency?)` alongside the class
 
 ## Contributing
@@ -327,7 +344,7 @@ PRs and issues welcome. To set up locally:
 git clone https://github.com/omar-ehab/tafgeet-arabic
 cd tafgeet-arabic
 npm install
-npm test               # 555 tests (107 unit + 262 snapshot + 186 feature/regression)
+npm test               # 885 tests (578 snapshot + 307 unit/feature/regression)
 npm run lint           # ESLint
 npm run test:js-compat # CJS + ESM smoke tests against built dist/
 ```

@@ -47,6 +47,9 @@ assert.equal(
 // --- Smoke: numeric input ------------------------------------------------
 assert.equal(new Tafgeet(44).parse(), 'أربعة وأربعون جنيه مصري فقط لا غير', '44 EGP (number input)');
 
+// --- Smoke: a v1.3 currency is reachable through the published build ------
+assert.equal(new Tafgeet('1.50', 'EUR').parse(), 'واحد يورو وخمسون سنت فقط لا غير', '1.50 EUR (v1.3 currency)');
+
 // --- Smoke: input validation throws cleanly ------------------------------
 assert.throws(() => new Tafgeet(null), TypeError, 'null amount throws TypeError');
 assert.throws(() => new Tafgeet(undefined), TypeError, 'undefined amount throws TypeError');
@@ -62,4 +65,4 @@ assert.equal(t.read(42), 'ٱثنين وأربعون', 'read() helper renders 0-9
 console.log('✓ ESM compatibility smoke test: ALL PASSED');
 console.log("  Loaded via: import { Tafgeet } from '../dist/index.mjs'");
 console.log('  Exercised: parse() / validation / read() / number input');
-console.log('  Currencies: EGP, SAR, KWD');
+console.log('  Currencies: EGP, SAR, KWD, EUR');
