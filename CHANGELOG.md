@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] – 2026-05-28
+
+A patch release of correctness, hardening, and safety fixes. Eight distinct
+bugs found across two audit passes. **No new APIs, no new options, no
+breaking changes for any input that was previously correctly handled.**
+Some previously-silent-failure inputs now throw clear typed errors instead.
+
+### Fixed
+
+- **Short fractions now correctly pad to currency precision** (real
+  interpretation bug, was wrongly justified as "back-compat"):
+  - `'1.5' EGP` before: `…وخمسة قروش` (5 piasters)
+    → after: `…وخمسون قرش` (50 piasters)
+  - `'1.20' TND` before: `…وعشرون مليم` (20 millimes)
+    → after: `…ومائتين مليم` (200 millimes)
+  - `'1.5' KWD` before: `…وخمسة فلوس` (5 fils)
+    → after: `…وخمسمائة فلس` (500 fils)
+  - Matches universal decimal interpretation — `.5` means half of the unit,
+    not 5 of the smallest atomic unit.
+- **Rounding can now carry from `<1` into `1`.** `new Tafgeet('0.999',
+  'EGP', { rounding: 'round' })` used to throw `AmountOutOfRangeError`
+  because integer-range validation ran BEFORE rounding had a chance to
+  carry. Now correctly renders `'واحد جنيه مصري فقط لا غير'`. Validation
+  was split into format-check (early) and integer-range-check (after
+  rounding).
+- **CRITICAL: number inputs that stringify in scientific notation no longer
+  silently corrupt.** Pre-1.2.1, `Number.MAX_VALUE` (≈1.79×10³⁰⁸)
+  rendered as `'1.79 EGP'`. Any number ≥ 1e21 or < 1e-6 (which JS
+  stringifies as `'1e+21'`, etc.) silently slipped past the format
+  regex because the regex was only applied to string inputs. Now throws
+  `AmountOutOfRangeError` with a helpful "pass as string" hint.
+  Affected magnitudes:
+  - `1e+21` and larger numbers
+  - `1e-7` and smaller numbers
+  - `Number.MAX_VALUE`, `Number.MIN_VALUE`
+- **No-currency mode rejects fractional input.** `new Tafgeet('1.50',
+  '').parse()` previously silently dropped the `.50` and returned
+  `'واحد فقط لا غير'`. Now throws `InvalidAmountError` with a message
+  suggesting either an integer amount or a currency code. Lenient on
+  all-zero fractions (`'1.0'`, `'1.00'`) for spreadsheet compatibility.
+- **Currency argument is now trimmed** for consistency with the amount.
+  `new Tafgeet('1', ' EGP ')` used to throw `UnsupportedCurrencyError`;
+  now works. Whitespace-only currency trims to `''` (no-currency mode).
+- **Options validation is now strict.** Pre-1.2.1, garbage in the third
+  constructor argument was silently ignored or crashed with raw
+  `TypeError`s:
+  - `{ rounding: 'XYZ' }` silently truncated → now throws with valid mode list
+  - `'string'`, `42`, `null`, arrays as options → silent/crash → now throws
+  - `{ Rounding: 'round' }` (capital R typo) silently used default → now throws
+  - `{ precision: 2 }` (option that doesn't exist yet) silently ignored → now throws
+- **`read()` validates its input.** Previously `read(-1)`, `read(1.5)`,
+  `read(1000)`, `read(NaN)`, `read('abc')` all silently returned `''`.
+  Now throws `InvalidAmountError` (wrong type / non-integer) or
+  `AmountOutOfRangeError` (outside 0..999). `read(0)` continues to
+  return `''` as documented.
+- **`parse()` re-validates internal state** (defense in depth against
+  reflection-based mutation of `private` fields). Previously,
+  `instance.digit = 0; instance.parse()` returned `' جنيه مصري فقط لا غير'`
+  (broken). Same applied for currency mutation. Both now throw typed errors.
+
+### Internal
+
+- 90 new regression tests across all 8 fixes. Total test count:
+  **555 passing** (was 465 at v1.2.0). Snapshot file unchanged.
+- Each fix shipped as its own PR with focused diff and dedicated tests.
+
+### Compatibility note for callers
+
+The fixes change output behavior only for inputs that were previously
+producing **wrong** output or **silently failing** — never for inputs
+that were correctly handled. If you have existing tests that asserted
+on outputs for `'1.5'`-style short fractions or numbers like
+`Number.MAX_VALUE`, those tests were pinning bugs and need updating.
+
 ## [1.2.0] – 2026-05-28
 
 A packaging, types, and ergonomics release. **No breaking API changes.**

@@ -229,6 +229,63 @@ try {
 }
 ```
 
+## Common pitfalls
+
+Things that surprise users — most are guarded by typed errors since v1.2.1, but worth knowing up front.
+
+### Pass strings for amounts you computed
+
+JavaScript floats lose precision above 2⁵³ and produce surprises like `0.1 + 0.2 = 0.30000000000000004`. The package documents `string | number` input, but strings round-trip cleanly:
+
+```ts
+// Risky — arithmetic results may render unexpectedly:
+const total = subtotal + tax;
+new Tafgeet(total, 'EGP').parse();
+
+// Safe — string preserves your computed precision:
+new Tafgeet(total.toFixed(2), 'EGP').parse();
+```
+
+### Amounts must be ≥ 1
+
+`new Tafgeet('0', 'EGP')` and `new Tafgeet('0.50', 'EGP')` both throw `AmountOutOfRangeError`. The Arabic dictionary has no word for zero and the column logic assumes at least one integer digit. If you compute an amount that might round below 1:
+
+```ts
+const a = Math.max(1, Math.ceil(amount));
+new Tafgeet(a.toString(), 'EGP').parse();
+```
+
+### Very large or very small numbers must be strings
+
+Numbers ≥ 10²¹ and < 10⁻⁶ stringify in scientific notation (`'1e+21'`), which the package rejects since v1.2.1 (it used to silently corrupt them). Pass them as strings:
+
+```ts
+// Throws AmountOutOfRangeError:
+new Tafgeet(1e21, 'EGP');
+
+// Works:
+new Tafgeet('1000000000000000000000', 'EGP');
+```
+
+### No-currency mode is for integers only
+
+`new Tafgeet('1.50', '')` throws since v1.2.1 (silently dropped the cents pre-1.2.1). Either pass an integer or specify a currency:
+
+```ts
+new Tafgeet('150', '').parse();          // ok — pure integer
+new Tafgeet('1.50', 'EGP').parse();     // ok — with currency
+new Tafgeet('1.50', '');                 // throws — ambiguous
+new Tafgeet('1.0', '').parse();          // ok — all-zero fraction
+```
+
+### `read()` validates strictly
+
+`Tafgeet.prototype.read(d)` throws on anything outside `0..999` since v1.2.1 (used to silently return `''`). Always pass a finite integer in range.
+
+### Strict options validation
+
+Unknown option keys throw — including typos like `{ Rounding: 'round' }`. Stick to the documented `TafgeetOptions` shape; the v1.2.1 strict mode catches typos at runtime that TypeScript catches at compile time.
+
 ## Supported currencies
 
 | Code | Currency | Decimals |
@@ -248,21 +305,18 @@ Missing a currency? [Open an issue](https://github.com/omar-ehab/tafgeet-arabic/
 
 ## Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md). Highlights of **v1.2.0**:
+See [CHANGELOG.md](./CHANGELOG.md).
 
-- **Dual ESM + CJS build** with proper `exports` map and `sideEffects: false`
-- **`CurrencyCode` union type** + **`SUPPORTED_CURRENCIES`** runtime array
-- **Arabic-Indic digits & thousands separators** accepted (`'١٬٥٠٠٫٢٥'`, `'1,500.25'`, `'1_500'`, …)
-- **Custom error classes** with discriminated `code` fields (still `instanceof TypeError` etc.)
-- **`rounding` option** — `'truncate'` *(default, preserves v1.1 behavior)*, `'round'`, `'floor'`, `'ceil'`, `'bankers'`
-- **262 snapshot tests** locking in every existing output against future regression
+**v1.2.1** (latest patch) — eight correctness and hardening fixes found across two audit passes. Most notably: `'1.5' EGP` now correctly renders 50 piasters (not 5); `Number.MAX_VALUE` and other exponential-notation numbers now throw instead of silently corrupting; rounding can now carry from `0.999` up to `1`; strict options validation catches typos. See the v1.2.1 entry in the CHANGELOG for the full list. No new APIs.
 
-Earlier: **v1.1.0** — 3.5–4.7× faster, 52% smaller install, fixes for issues [#7](https://github.com/omar-ehab/tafgeet-arabic/issues/7) / [#8](https://github.com/omar-ehab/tafgeet-arabic/issues/8) / fraction-plural, KWD added, input validation.
+**v1.2.0** — dual ESM/CJS build, `CurrencyCode` union type, Arabic-Indic & thousands-separator input, typed error classes, `rounding` option, 262 snapshot tests.
+
+**v1.1.0** — 3.5–4.7× faster, 52% smaller install, fixes for issues [#7](https://github.com/omar-ehab/tafgeet-arabic/issues/7) / [#8](https://github.com/omar-ehab/tafgeet-arabic/issues/8) / fraction-plural, KWD added, input validation.
 
 ## Roadmap
 
-- **v1.3:** currency registry (`registerCurrency`), `precision` option, more currencies (BHD, OMR, JOD, IQD, LBP, MAD, DZD, …)
-- **v1.4:** grammar options (`feminine`, `accusative`, `style: 'simple' | 'formal' | 'banking'`) — pending native-speaker review of the dictionaries
+- **v1.3:** 14 more currencies (10 Arab-region + 4 international: BHD, OMR, JOD, IQD, LYD, LBP, MAD, DZD, SYP, YER, EUR, GBP, CHF, CAD)
+- **v1.4:** native-speaker grammar review of the Arabic dictionaries; grammar options (`feminine`, `accusative`); style modes — all pending native review
 - Optional: functional API `tafgeet(amount, currency?)` alongside the class
 
 ## Contributing
@@ -273,7 +327,7 @@ PRs and issues welcome. To set up locally:
 git clone https://github.com/omar-ehab/tafgeet-arabic
 cd tafgeet-arabic
 npm install
-npm test               # 465 tests (107 unit + 262 snapshot + 96 feature)
+npm test               # 555 tests (107 unit + 262 snapshot + 186 feature/regression)
 npm run lint           # ESLint
 npm run test:js-compat # CJS + ESM smoke tests against built dist/
 ```
