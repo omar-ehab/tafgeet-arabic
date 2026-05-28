@@ -1,13 +1,26 @@
 import { COLUMN_PROPERTIES, columns, currencies, HUNDREDS, ONES, TEENS, TENS } from './constants';
+import { AmountOutOfRangeError, InvalidAmountError, UnsupportedCurrencyError } from './errors';
 import { CurrencyInput } from './types';
 
 // Re-export public types + runtime helpers so consumers can import them
 // directly:
 //
-//   import { Tafgeet, SUPPORTED_CURRENCIES } from 'tafgeet-arabic';
-//   import type { Currency, Currencies, CurrencyCode, CurrencyInput, NumberProperties } from 'tafgeet-arabic';
+//   import {
+//     Tafgeet,
+//     SUPPORTED_CURRENCIES,
+//     InvalidAmountError, AmountOutOfRangeError, UnsupportedCurrencyError,
+//     isTafgeetError,
+//   } from 'tafgeet-arabic';
+//   import type { Currency, Currencies, CurrencyCode, CurrencyInput, NumberProperties, TafgeetErrorCode } from 'tafgeet-arabic';
 export type { Currency, Currencies, CurrencyCode, CurrencyInput, NumberProperties } from './types';
 export { SUPPORTED_CURRENCIES } from './constants';
+export {
+  InvalidAmountError,
+  AmountOutOfRangeError,
+  UnsupportedCurrencyError,
+  isTafgeetError,
+  type TafgeetErrorCode,
+} from './errors';
 
 export class Tafgeet {
   private currency: string;
@@ -104,19 +117,19 @@ export class Tafgeet {
    */
   private static validateInput(digit: unknown, currency: unknown): string {
     if (digit === null || digit === undefined) {
-      throw new TypeError(`Tafgeet: amount is required, got ${String(digit)}`);
+      throw new InvalidAmountError(`Tafgeet: amount is required, got ${String(digit)}`);
     }
     if (typeof digit !== 'number' && typeof digit !== 'string') {
-      throw new TypeError(`Tafgeet: amount must be a number or numeric string, got ${typeof digit}`);
+      throw new InvalidAmountError(`Tafgeet: amount must be a number or numeric string, got ${typeof digit}`);
     }
 
     let normalized: string;
     if (typeof digit === 'number') {
       if (!Number.isFinite(digit)) {
-        throw new RangeError(`Tafgeet: amount must be a finite number, got ${digit}`);
+        throw new AmountOutOfRangeError(`Tafgeet: amount must be a finite number, got ${digit}`);
       }
       if (digit < 0) {
-        throw new RangeError(`Tafgeet: amount must be non-negative, got ${digit}`);
+        throw new AmountOutOfRangeError(`Tafgeet: amount must be non-negative, got ${digit}`);
       }
       normalized = digit.toString();
     } else {
@@ -125,10 +138,12 @@ export class Tafgeet {
       // numeric string like "١٬٥٠٠٫٢٥" would be wrongly rejected.
       normalized = Tafgeet.normalizeAmount(digit);
       if (normalized === '' || !/^-?\d+(\.\d+)?$/.test(normalized)) {
-        throw new TypeError(`Tafgeet: amount string must be a plain decimal number (e.g. "1234.56"), got "${digit}"`);
+        throw new InvalidAmountError(
+          `Tafgeet: amount string must be a plain decimal number (e.g. "1234.56"), got "${digit}"`,
+        );
       }
       if (normalized.startsWith('-')) {
-        throw new RangeError(`Tafgeet: amount must be non-negative, got "${digit}"`);
+        throw new AmountOutOfRangeError(`Tafgeet: amount must be non-negative, got "${digit}"`);
       }
     }
 
@@ -138,18 +153,18 @@ export class Tafgeet {
       // Amounts < 1 (e.g. "0", "0.5") are not supported in 1.x — the
       // dictionaries have no "صفر" entry and the column logic assumes
       // at least one integer digit. Tracked as a future enhancement.
-      throw new RangeError(`Tafgeet: integer part must be >= 1, got "${normalized}"`);
+      throw new AmountOutOfRangeError(`Tafgeet: integer part must be >= 1, got "${normalized}"`);
     }
     if (intPartStr.length >= 16) {
-      throw new RangeError(`Tafgeet: integer part must be < 16 digits, got "${normalized}"`);
+      throw new AmountOutOfRangeError(`Tafgeet: integer part must be < 16 digits, got "${normalized}"`);
     }
 
     if (typeof currency !== 'string') {
-      throw new TypeError(`Tafgeet: currency must be a string, got ${typeof currency}`);
+      throw new InvalidAmountError(`Tafgeet: currency must be a string, got ${typeof currency}`);
     }
     if (currency !== '' && !(currency in currencies)) {
       const supported = Object.keys(currencies).join(', ');
-      throw new Error(`Tafgeet: unknown currency "${currency}". Supported: ${supported}`);
+      throw new UnsupportedCurrencyError(`Tafgeet: unknown currency "${currency}". Supported: ${supported}`);
     }
 
     return normalized;
@@ -166,7 +181,11 @@ export class Tafgeet {
   parse(): string {
     const intStr = this.digit.toString();
     if (intStr.length >= 16) {
-      throw new Error('Number out of range!');
+      // Unreachable from public API since 1.1.0 (the constructor
+      // validator catches > 15 digits earlier with a clearer message),
+      // but kept as a safety net for anyone using `read()` directly
+      // or mutating the private `digit` field via reflection.
+      throw new AmountOutOfRangeError('Tafgeet: integer part must be < 16 digits');
     }
 
     let str = '';
