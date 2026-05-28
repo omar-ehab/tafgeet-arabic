@@ -16,11 +16,52 @@ export class Tafgeet {
   private digit: number;
 
   constructor(digit: string | number, currency: CurrencyInput = 'EGP') {
-    Tafgeet.validateInput(digit, currency);
+    // validateInput normalizes Arabic-Indic digits, strips thousands
+    // separators, and returns the canonical Latin-digit string. Throws
+    // a typed error on any malformed input.
+    const normalized = Tafgeet.validateInput(digit, currency);
     this.currency = currency;
-    this.splitted = digit.toString().split('.');
+    this.splitted = normalized.split('.');
     this.digit = parseInt(this.splitted[0] ?? '0', 10);
     this.fraction = this.parseFraction(this.splitted[1], currency);
+  }
+
+  /**
+   * Normalizes a numeric input to its canonical Latin-digit form.
+   * Accepts (in addition to plain Latin "1234.56"):
+   *
+   *   - Arabic-Indic digits         "١٢٣٤.٥٦"     (U+0660..0669)
+   *   - Eastern Arabic-Indic digits "۱۲۳۴.۵۶"     (U+06F0..06F9, Farsi/Urdu)
+   *   - Arabic decimal separator    "1234٫56"     (U+066B)
+   *   - Arabic thousands separator  "1٬234"       (U+066C)
+   *   - Comma thousands separator   "1,234.56"    (English)
+   *   - Underscore separator        "1_234_567"   (JS numeric literal style)
+   *   - Space separators            "1 234,56"    (French/EU style, but . only)
+   *   - NBSP / narrow-NBSP / thin space separators (pasted from word processors)
+   *
+   * Does NOT change the integer-vs-decimal semantics — `'1.2'` remains
+   * `'1.2'` (two-tenths), not `'1.20'`. That's documented behavior.
+   *
+   * Returns the normalized string. The validator does its own format
+   * check on this output so any non-numeric residue throws cleanly.
+   */
+  private static normalizeAmount(input: string): string {
+    return (
+      input
+        .trim()
+        // Arabic-Indic digits ٠..٩ -> 0..9
+        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+        // Eastern Arabic-Indic digits ۰..۹ (Farsi/Urdu) -> 0..9
+        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+        // Arabic decimal separator ٫ -> .
+        .replace(/٫/g, '.')
+        // Arabic thousands separator ٬ -> (strip)
+        .replace(/٬/g, '')
+        // Strip ASCII comma, underscore, and all unicode whitespace
+        // (regular space, NBSP U+00A0, narrow NBSP U+202F, thin space
+        // U+2009, tab, etc. — \s covers them).
+        .replace(/[,_\s]/g, '')
+    );
   }
 
   /**
@@ -46,10 +87,12 @@ export class Tafgeet {
   }
 
   /**
-   * Validates the constructor arguments and throws a clear, typed error
-   * for malformed input. Pre-1.1.0 invalid input either crashed deep
-   * inside parse() with a cryptic TypeError, or silently produced
-   * strings containing the literal word "undefined".
+   * Validates and normalizes the constructor arguments. Returns the
+   * canonical Latin-digit amount string for the constructor to consume.
+   *
+   * Pre-1.1.0 invalid input either crashed deep inside parse() with a
+   * cryptic TypeError, or silently produced strings containing the
+   * literal word "undefined".
    *
    * Accepts `unknown` because JS callers can pass values that violate
    * the public type signature — that's the whole point of validation.
@@ -59,7 +102,7 @@ export class Tafgeet {
    *   RangeError — NaN, Infinity, negative, zero, or > 15 digits
    *   Error      — unknown currency code
    */
-  private static validateInput(digit: unknown, currency: unknown): void {
+  private static validateInput(digit: unknown, currency: unknown): string {
     if (digit === null || digit === undefined) {
       throw new TypeError(`Tafgeet: amount is required, got ${String(digit)}`);
     }
@@ -77,14 +120,16 @@ export class Tafgeet {
       }
       normalized = digit.toString();
     } else {
-      const trimmed = digit.trim();
-      if (trimmed === '' || !/^-?\d+(\.\d+)?$/.test(trimmed)) {
+      // Normalize first (Arabic-Indic digits, thousands separators, etc.)
+      // BEFORE the format regex — otherwise a perfectly valid Arabic
+      // numeric string like "١٬٥٠٠٫٢٥" would be wrongly rejected.
+      normalized = Tafgeet.normalizeAmount(digit);
+      if (normalized === '' || !/^-?\d+(\.\d+)?$/.test(normalized)) {
         throw new TypeError(`Tafgeet: amount string must be a plain decimal number (e.g. "1234.56"), got "${digit}"`);
       }
-      if (trimmed.startsWith('-')) {
+      if (normalized.startsWith('-')) {
         throw new RangeError(`Tafgeet: amount must be non-negative, got "${digit}"`);
       }
-      normalized = trimmed;
     }
 
     const intPartStr = normalized.split('.')[0] ?? '';
@@ -106,6 +151,8 @@ export class Tafgeet {
       const supported = Object.keys(currencies).join(', ');
       throw new Error(`Tafgeet: unknown currency "${currency}". Supported: ${supported}`);
     }
+
+    return normalized;
   }
 
   /**
