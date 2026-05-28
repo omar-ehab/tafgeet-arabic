@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] – 2026-05-29
+
+A coverage release. 14 new bundled currencies bring the total to 24 —
+covering nearly all Arabic-speaking countries plus major international
+currencies for cross-border invoicing.
+
+No new APIs, no new options, no breaking changes. Every input that
+worked in v1.2 produces byte-identical output here — verified by the
+existing 262 snapshot assertions, all unchanged.
+
+### Added
+
+- **10 new Arab-region currencies:**
+  - `BHD` — Bahraini Dinar (3 decimals)
+  - `OMR` — Omani Rial (3 decimals)
+  - `JOD` — Jordanian Dinar (3 decimals)
+  - `IQD` — Iraqi Dinar (3 decimals)
+  - `LYD` — Libyan Dinar (3 decimals)
+  - `LBP` — Lebanese Pound (2 decimals)
+  - `MAD` — Moroccan Dirham (2 decimals)
+  - `DZD` — Algerian Dinar (2 decimals)
+  - `SYP` — Syrian Pound (2 decimals)
+  - `YER` — Yemeni Rial (2 decimals)
+- **4 new major international currencies** (for cross-border invoicing):
+  - `EUR` — Euro (2 decimals)
+  - `GBP` — British Pound Sterling (2 decimals)
+  - `CHF` — Swiss Franc (2 decimals)
+  - `CAD` — Canadian Dollar (2 decimals)
+
+The Arabic strings for the new currencies were researched from standard
+sources; a native-speaker review of all 24 currency names is planned for
+v1.4. Corrections welcome via issues/PRs.
+
+### Changed
+
+- Snapshot test matrix expanded to cover the new currencies (578 entries
+  total, up from 262 — only additions, no existing row changed).
+- `SUPPORTED_CURRENCIES` is now sorted alphabetically (was insertion
+  order). The runtime contents are otherwise unchanged for the original
+  10 codes.
+
 ## [1.2.1] – 2026-05-28
 
 A patch release of correctness, hardening, and safety fixes. Eight distinct

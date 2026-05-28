@@ -40,6 +40,20 @@ export interface Currencies {
   AUD: Currency;
   TND: Currency;
   TRY: Currency;
+  BHD: Currency;
+  OMR: Currency;
+  JOD: Currency;
+  IQD: Currency;
+  LYD: Currency;
+  LBP: Currency;
+  MAD: Currency;
+  DZD: Currency;
+  SYP: Currency;
+  YER: Currency;
+  EUR: Currency;
+  GBP: Currency;
+  CHF: Currency;
+  CAD: Currency;
 }
 
 /**
