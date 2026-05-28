@@ -27,14 +27,17 @@ export class Tafgeet {
   private digit: number;
 
   constructor(digit: string | number, currency: CurrencyInput = 'EGP', options: TafgeetOptions = {}) {
-    // validateInput throws on malformed input and returns the canonical
-    // Latin-digit form (e.g. Arabic-Indic and thousands-separator stripped).
+    // Format + type validation runs early; integer-range validation runs
+    // AFTER rounding so that e.g. `'0.999'` with rounding `'round'` can
+    // legitimately carry into integer 1 instead of being rejected as < 1.
     const normalized = Tafgeet.validateInput(digit, currency);
     this.currency = currency;
     this.splitted = normalized.split('.');
     const intValue = parseInt(this.splitted[0] ?? '0', 10);
     const { fracValue, intCarry } = this.parseFraction(this.splitted[1], currency, options.rounding ?? 'truncate');
-    this.digit = intValue + intCarry;
+    const finalInt = intValue + intCarry;
+    Tafgeet.validateIntegerRange(finalInt, normalized);
+    this.digit = finalInt;
     this.fraction = fracValue;
   }
 
@@ -152,18 +155,6 @@ export class Tafgeet {
       }
     }
 
-    const intPartStr = normalized.split('.')[0] ?? '';
-    const intPart = parseInt(intPartStr, 10);
-    if (intPart < 1) {
-      // Amounts < 1 (e.g. "0", "0.5") are not supported in 1.x — the
-      // dictionaries have no "صفر" entry and the column logic assumes
-      // at least one integer digit. Tracked as a future enhancement.
-      throw new AmountOutOfRangeError(`Tafgeet: integer part must be >= 1, got "${normalized}"`);
-    }
-    if (intPartStr.length >= 16) {
-      throw new AmountOutOfRangeError(`Tafgeet: integer part must be < 16 digits, got "${normalized}"`);
-    }
-
     if (typeof currency !== 'string') {
       throw new InvalidAmountError(`Tafgeet: currency must be a string, got ${typeof currency}`);
     }
@@ -173,6 +164,27 @@ export class Tafgeet {
     }
 
     return normalized;
+  }
+
+  /**
+   * Validates the FINAL integer part (after rounding has had a chance to
+   * carry from the fractional part). Range: 1..999,999,999,999,999.
+   *
+   * Splitting this from validateInput is what enables `'0.999' + round`
+   * to legitimately become `'1'` instead of being rejected as < 1.
+   */
+  private static validateIntegerRange(finalInt: number, originalNormalized: string): void {
+    if (finalInt < 1) {
+      // Amounts < 1 (e.g. "0", "0.5") are not supported in 1.x — the
+      // dictionaries have no "صفر" entry and the column logic assumes
+      // at least one integer digit.
+      throw new AmountOutOfRangeError(`Tafgeet: integer part must be >= 1, got "${originalNormalized}"`);
+    }
+    if (finalInt.toString().length >= 16) {
+      // Catches both the original-too-big case and the rare "rounding
+      // pushed a 15-digit integer to 16" overflow.
+      throw new AmountOutOfRangeError(`Tafgeet: integer part must be < 16 digits, got "${originalNormalized}"`);
+    }
   }
 
   /**
