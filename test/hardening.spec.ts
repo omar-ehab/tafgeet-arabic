@@ -1,6 +1,6 @@
 import { assert } from 'chai';
 
-import { AmountOutOfRangeError, InvalidAmountError, Tafgeet } from '../src';
+import { AmountOutOfRangeError, InvalidAmountError, Tafgeet, UnsupportedCurrencyError } from '../src';
 
 describe('read() input validation (v1.2.1 — Bug B)', () => {
   // Pre-1.2.1: read() silently returned '' for any invalid input.
@@ -122,6 +122,37 @@ describe('parse() validates internal state (v1.2.1 — Bug C)', () => {
         new Tafgeet('1234.56', 'EGP').parse(),
         'ألف ومائتين وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير',
       );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Bug D — found in the 2nd-pass audit. Symmetric to Bug C but for currency.
+  // ---------------------------------------------------------------------------
+  describe('parse() validates currency state (v1.2.1 — Bug D)', () => {
+    it('mutated currency = unregistered string → UnsupportedCurrencyError (was: raw TypeError)', () => {
+      const t = new Tafgeet('1.50', 'EGP');
+      (t as unknown as { currency: string }).currency = 'INVALID';
+      assert.throws(() => t.parse(), UnsupportedCurrencyError, /unknown currency "INVALID"/);
+    });
+    it('mutated currency = number → InvalidAmountError (was: raw TypeError)', () => {
+      const t = new Tafgeet('1.50', 'EGP');
+      (t as unknown as { currency: number }).currency = 42;
+      assert.throws(() => t.parse(), InvalidAmountError, /currency must be a string/);
+    });
+    it('mutated currency = null → InvalidAmountError', () => {
+      const t = new Tafgeet('1.50', 'EGP');
+      (t as unknown as { currency: null }).currency = null;
+      assert.throws(() => t.parse(), InvalidAmountError, /currency must be a string/);
+    });
+    it('mutated currency = SAR (valid) still works (only invalid state throws)', () => {
+      const t = new Tafgeet('1', 'EGP');
+      (t as unknown as { currency: string }).currency = 'SAR';
+      assert.equal(t.parse(), 'واحد ريال سعودي فقط لا غير');
+    });
+    it('mutated currency = "" → no-currency mode still works', () => {
+      const t = new Tafgeet('1', 'EGP');
+      (t as unknown as { currency: string }).currency = '';
+      assert.equal(t.parse(), 'واحد فقط لا غير');
     });
   });
 });

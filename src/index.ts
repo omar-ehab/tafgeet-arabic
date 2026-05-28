@@ -254,13 +254,19 @@ export class Tafgeet {
     const intStr = this.digit.toString();
     // Re-validate the internal state — guards against post-construction
     // mutation (private fields are TS-only, accessible at runtime via
-    // reflection). The constructor already validates these, so this only
-    // fires if someone mutated `this.digit` between construction and parse.
+    // reflection). The constructor already validates these, so these only
+    // fire if someone mutated state between construction and parse.
     if (!Number.isInteger(this.digit) || this.digit < 1) {
       throw new AmountOutOfRangeError(`Tafgeet: integer part must be >= 1, got ${this.digit}`);
     }
     if (intStr.length >= 16) {
       throw new AmountOutOfRangeError('Tafgeet: integer part must be < 16 digits');
+    }
+    if (typeof this.currency !== 'string') {
+      throw new InvalidAmountError(`Tafgeet: currency must be a string, got ${typeof this.currency}`);
+    }
+    if (this.currency !== '' && !(this.currency in currencies)) {
+      throw new UnsupportedCurrencyError(`Tafgeet: unknown currency "${this.currency}"`);
     }
 
     let str = '';
