@@ -28,14 +28,26 @@ export class Tafgeet {
 
   constructor(digit: string | number, currency: CurrencyInput = 'EGP', options: TafgeetOptions = {}) {
     Tafgeet.validateOptions(options);
+    // Trim whitespace from currency for consistency with the amount
+    // (which is also trimmed during normalization). `' EGP '` works.
+    const trimmedCurrency = typeof currency === 'string' ? currency.trim() : currency;
     // Format + type validation runs early; integer-range validation runs
     // AFTER rounding so that e.g. `'0.999'` with rounding `'round'` can
     // legitimately carry into integer 1 instead of being rejected as < 1.
-    const normalized = Tafgeet.validateInput(digit, currency);
-    this.currency = currency;
+    const normalized = Tafgeet.validateInput(digit, trimmedCurrency);
+    // validateInput guarantees trimmedCurrency is now a string.
+    this.currency = trimmedCurrency as string;
     this.splitted = normalized.split('.');
+    // No-currency mode silently dropped fractional input pre-1.2.1.
+    // Now: reject up front (the user clearly intended fractional rendering
+    // but no-currency mode has no fraction word to render with).
+    if (this.currency === '' && /[1-9]/.test(this.splitted[1] ?? '')) {
+      throw new InvalidAmountError(
+        `Tafgeet: no-currency mode does not accept fractional amounts (no fraction word to render), got "${normalized}". Pass an integer amount, or specify a currency.`,
+      );
+    }
     const intValue = parseInt(this.splitted[0] ?? '0', 10);
-    const { fracValue, intCarry } = this.parseFraction(this.splitted[1], currency, options.rounding ?? 'truncate');
+    const { fracValue, intCarry } = this.parseFraction(this.splitted[1], this.currency, options.rounding ?? 'truncate');
     const finalInt = intValue + intCarry;
     Tafgeet.validateIntegerRange(finalInt, normalized);
     this.digit = finalInt;
