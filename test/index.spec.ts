@@ -164,15 +164,19 @@ describe('Reading full amounts', () => {
   it('should read EGP 55,000,051,000', () => {
     assert.equal('خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري فقط لا غير', new Tafgeet('55000051000').parse());
   });
-  it('should read EGP 55,000,051,000.2', () => {
+  it('should read EGP 55,000,051,000.2 (single-digit fraction padded to 20 piasters)', () => {
+    // Pre-1.2.1 this returned '...وٱثنين قرش' (2 piasters) — wrong, since
+    // `.2` decimally means `.20` = 20 piasters. Fixed by right-padding the
+    // fraction string to the currency's decimals before parseInt.
     assert.equal(
-      'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وٱثنين قرش فقط لا غير',
+      'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وعشرون قرش فقط لا غير',
       new Tafgeet('55000051000.2').parse(),
     );
   });
-  it('should read EGP 55,000,051,000.1', () => {
+  it('should read EGP 55,000,051,000.1 (single-digit fraction padded to 10 piasters)', () => {
+    // Pre-1.2.1 returned '...وواحد قرش' (1 piaster). Same fix.
     assert.equal(
-      'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وواحد قرش فقط لا غير',
+      'خمسة وخمسون مليار وواحد وخمسون ألف جنيه مصري وعشرة قروش فقط لا غير',
       new Tafgeet('55000051000.1').parse(),
     );
   });
@@ -208,6 +212,33 @@ describe('Reading full amounts', () => {
   });
   it('should read EGP 2,000,000 (no trailing connector)', () => {
     assert.equal('مليونين جنيه مصري فقط لا غير', new Tafgeet('2000000').parse());
+  });
+
+  // Regression tests for v1.2.1 — short-fraction padding bug.
+  // Inputs with fewer decimal digits than the currency supports must be
+  // right-padded with zeros (`.5 EGP` means 50 piasters, not 5).
+  it('should read EGP 1.5 (single digit padded to 50 piasters)', () => {
+    assert.equal('واحد جنيه مصري وخمسون قرش فقط لا غير', new Tafgeet('1.5').parse());
+  });
+  it('should read EGP 1.3 (single digit padded to 30 piasters)', () => {
+    assert.equal('واحد جنيه مصري وثلاثون قرش فقط لا غير', new Tafgeet('1.3').parse());
+  });
+  it('should read EGP 100.5 (single digit fraction on large amount)', () => {
+    assert.equal('مائة جنيه مصري وخمسون قرش فقط لا غير', new Tafgeet('100.5').parse());
+  });
+  it('should read TND 1.20 (2-digit fraction padded to 200 millimes)', () => {
+    // TND has 3 decimals; "1.20" decimally means "1.200" = 200 millimes.
+    // Pre-1.2.1 returned "واحد دينار تونسي وعشرون مليم" (20 millimes).
+    assert.equal('واحد دينار تونسي ومائتين مليم فقط لا غير', new Tafgeet('1.20', 'TND').parse());
+  });
+  it('should read TND 1.2 (single-digit fraction padded to 200 millimes)', () => {
+    assert.equal('واحد دينار تونسي ومائتين مليم فقط لا غير', new Tafgeet('1.2', 'TND').parse());
+  });
+  it('should read KWD 1.5 (single-digit fraction padded to 500 fils)', () => {
+    assert.equal('واحد دينار كويتي وخمسمائة فلس فقط لا غير', new Tafgeet('1.5', 'KWD').parse());
+  });
+  it('should read KWD 1.05 (2-digit fraction padded to 50 fils)', () => {
+    assert.equal('واحد دينار كويتي وخمسون فلس فقط لا غير', new Tafgeet('1.05', 'KWD').parse());
   });
 
   // Regression tests for the fraction singular/plural bug (the bug behind

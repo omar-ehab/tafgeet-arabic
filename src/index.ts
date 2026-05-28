@@ -56,9 +56,10 @@ export class Tafgeet {
 
   /**
    * Parses the fractional portion.
-   *   - empty/undefined  -> 0
-   *   - length <= decimals  -> literal parse (`'1.2 EGP'` -> 2, not 20;
-   *     historical behavior preserved for backward compat)
+   *   - empty/undefined     -> 0
+   *   - length <= decimals  -> right-pad with zeros to `decimals`, then
+   *     parse. `'1.5 EGP'` -> 50 piasters (NOT 5). `'1.20 TND'` -> 200
+   *     millimes (NOT 20). This matches universal decimal interpretation.
    *   - length >  decimals  -> rounding per `mode`; may carry into the
    *     integer part (`1.995 EGP` with `'round'` -> `2 EGP`).
    */
@@ -71,7 +72,8 @@ export class Tafgeet {
     const decimals = currencies[currency as keyof typeof currencies]?.decimals ?? 2;
 
     if (fracStr.length <= decimals) {
-      return { fracValue: parseInt(fracStr, 10), intCarry: 0 };
+      // Right-pad so `'5'` for EGP -> '50' (50 piasters), not 5 piasters.
+      return { fracValue: parseInt(fracStr.padEnd(decimals, '0'), 10), intCarry: 0 };
     }
 
     const keep = fracStr.slice(0, decimals);
