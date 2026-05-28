@@ -39,57 +39,28 @@ export class Tafgeet {
   }
 
   /**
-   * Normalizes a numeric input to its canonical Latin-digit form.
-   * Accepts (in addition to plain Latin "1234.56"):
-   *
-   *   - Arabic-Indic digits         "١٢٣٤.٥٦"     (U+0660..0669)
-   *   - Eastern Arabic-Indic digits "۱۲۳۴.۵۶"     (U+06F0..06F9, Farsi/Urdu)
-   *   - Arabic decimal separator    "1234٫56"     (U+066B)
-   *   - Arabic thousands separator  "1٬234"       (U+066C)
-   *   - Comma thousands separator   "1,234.56"    (English)
-   *   - Underscore separator        "1_234_567"   (JS numeric literal style)
-   *   - Space separators            "1 234,56"    (French/EU style, but . only)
-   *   - NBSP / narrow-NBSP / thin space separators (pasted from word processors)
-   *
-   * Does NOT change the integer-vs-decimal semantics — `'1.2'` remains
-   * `'1.2'` (two-tenths), not `'1.20'`. That's documented behavior.
-   *
-   * Returns the normalized string. The validator does its own format
-   * check on this output so any non-numeric residue throws cleanly.
+   * Normalizes Latin / Arabic-Indic / Eastern Arabic-Indic digits and
+   * strips thousands separators (commas, underscores, all whitespace,
+   * Arabic ٬) to a canonical Latin-digit string. Arabic decimal mark
+   * ٫ becomes `.`. Does NOT pad — `'1.2'` stays two-tenths, not `'1.20'`.
    */
   private static normalizeAmount(input: string): string {
-    return (
-      input
-        .trim()
-        // Arabic-Indic digits ٠..٩ -> 0..9
-        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-        // Eastern Arabic-Indic digits ۰..۹ (Farsi/Urdu) -> 0..9
-        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-        // Arabic decimal separator ٫ -> .
-        .replace(/٫/g, '.')
-        // Arabic thousands separator ٬ -> (strip)
-        .replace(/٬/g, '')
-        // Strip ASCII comma, underscore, and all unicode whitespace
-        // (regular space, NBSP U+00A0, narrow NBSP U+202F, thin space
-        // U+2009, tab, etc. — \s covers them).
-        .replace(/[,_\s]/g, '')
-    );
+    return input
+      .trim()
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)) // Arabic-Indic
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0)) // Eastern Arabic-Indic (Farsi/Urdu)
+      .replace(/٫/g, '.') // Arabic decimal separator
+      .replace(/٬/g, '') // Arabic thousands separator
+      .replace(/[,_\s]/g, ''); // comma, underscore, any whitespace
   }
 
   /**
-   * Parses the fractional portion of the amount.
-   *
-   *   undefined / ""    -> 0
-   *   length <= decimals  -> literal parse, no rounding
-   *                          ("1.2 EGP" -> 2, NOT 20 — historical
-   *                           behavior preserved for backward compat)
-   *   length >  decimals  -> rounding applied per `mode`. May carry
-   *                          into the integer part (e.g. 1.995 EGP
-   *                          with mode='round' -> { fracValue: 0,
-   *                          intCarry: 1 }, rendered as 2 EGP).
-   *
-   * The `mode='truncate'` default reproduces v1.1.x output byte-for-byte
-   * for every existing input.
+   * Parses the fractional portion.
+   *   - empty/undefined  -> 0
+   *   - length <= decimals  -> literal parse (`'1.2 EGP'` -> 2, not 20;
+   *     historical behavior preserved for backward compat)
+   *   - length >  decimals  -> rounding per `mode`; may carry into the
+   *     integer part (`1.995 EGP` with `'round'` -> `2 EGP`).
    */
   private parseFraction(
     fracStr: string | undefined,
@@ -118,30 +89,17 @@ export class Tafgeet {
   }
 
   /**
-   * Computes whether to add 1 to the kept-fraction value based on the
-   * dropped digits and the rounding mode. Pure integer arithmetic on
-   * strings — no floating-point hazards.
-   *
-   *   drop = the dropped digit string (everything past `decimals`)
-   *   keep = the digits we're keeping (used by `bankers` for parity)
+   * Returns 1 if the kept fraction should be incremented under `mode`,
+   * 0 otherwise. Integer arithmetic on the digit string — no FP hazards.
+   * `keep` is used by `'bankers'` for the last-digit parity check.
    */
   private static computeRoundingCarry(drop: string, keep: string, mode: RoundingMode): number {
     if (mode === 'truncate' || mode === 'floor') return 0;
-
     const firstDropDigit = parseInt(drop.charAt(0), 10);
-
-    if (mode === 'ceil') {
-      // Any non-zero in the dropped digits forces a carry.
-      return /[1-9]/.test(drop) ? 1 : 0;
-    }
-    if (mode === 'round') {
-      // Standard half-up rounding.
-      return firstDropDigit >= 5 ? 1 : 0;
-    }
+    if (mode === 'ceil') return /[1-9]/.test(drop) ? 1 : 0;
+    if (mode === 'round') return firstDropDigit >= 5 ? 1 : 0;
     if (mode === 'bankers') {
-      // Round half to even — only special when the dropped value is
-      // EXACTLY 0.5 (first digit 5, all subsequent zero). Otherwise
-      // behaves like round-half-up.
+      // Only the exactly-0.5 case differs from half-up; otherwise identical.
       const isExactlyHalf = firstDropDigit === 5 && /^0*$/.test(drop.slice(1));
       if (isExactlyHalf) {
         const lastKept = parseInt(keep.charAt(keep.length - 1), 10);
@@ -153,16 +111,12 @@ export class Tafgeet {
   }
 
   /**
-   * Validates and normalizes the constructor arguments. Returns the
-   * canonical Latin-digit amount string for the constructor to consume.
+   * Validates the constructor arguments and returns the canonical
+   * Latin-digit amount string. Accepts `unknown` because JS callers
+   * can violate the public types — that's what runtime validation is for.
    *
-   * Accepts `unknown` because JS callers can pass values that violate
-   * the public type signature — that's the whole point of validation.
-   *
-   * Throws:
-   *   InvalidAmountError       — wrong type, non-numeric string, null/undefined
-   *   AmountOutOfRangeError    — NaN, Infinity, negative, zero, or > 15 digits
-   *   UnsupportedCurrencyError — unknown currency code
+   * Throws InvalidAmountError / AmountOutOfRangeError /
+   * UnsupportedCurrencyError as appropriate.
    */
   private static validateInput(digit: unknown, currency: unknown): string {
     if (digit === null || digit === undefined) {
@@ -247,11 +201,9 @@ export class Tafgeet {
         groups.push(parseInt(intStr.slice(i, i + 3), 10));
       }
 
-      // groups[i] corresponds to column (startCol + i). The final group
-      // can land at column index >= columns.length — that's the "ones"
-      // position and gets rendered without a suffix.
-      // Join non-zero parts with " و"; the trailing-zero cleanup is
-      // implicit because we only emit non-zero groups.
+      // groups[i] -> column (startCol + i). A trailing group past
+      // columns.length is the "ones" position (no suffix). Skipping
+      // zero groups makes trailing-zero cleanup implicit.
       const rendered: string[] = [];
       for (let i = 0; i < groups.length; i++) {
         const value = groups[i] ?? 0;
