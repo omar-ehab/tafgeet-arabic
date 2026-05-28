@@ -2,19 +2,6 @@ import { COLUMN_PROPERTIES, columns, currencies, HUNDREDS, ONES, TEENS, TENS } f
 import { AmountOutOfRangeError, InvalidAmountError, UnsupportedCurrencyError } from './errors';
 import { CurrencyInput, RoundingMode, TafgeetOptions } from './types';
 
-// Re-export public types + runtime helpers so consumers can import them
-// directly:
-//
-//   import {
-//     Tafgeet,
-//     SUPPORTED_CURRENCIES,
-//     InvalidAmountError, AmountOutOfRangeError, UnsupportedCurrencyError,
-//     isTafgeetError,
-//   } from 'tafgeet-arabic';
-//   import type {
-//     Currency, Currencies, CurrencyCode, CurrencyInput,
-//     NumberProperties, RoundingMode, TafgeetOptions, TafgeetErrorCode,
-//   } from 'tafgeet-arabic';
 export type {
   Currency,
   Currencies,
@@ -40,9 +27,8 @@ export class Tafgeet {
   private digit: number;
 
   constructor(digit: string | number, currency: CurrencyInput = 'EGP', options: TafgeetOptions = {}) {
-    // validateInput normalizes Arabic-Indic digits, strips thousands
-    // separators, and returns the canonical Latin-digit string. Throws
-    // a typed error on any malformed input.
+    // validateInput throws on malformed input and returns the canonical
+    // Latin-digit form (e.g. Arabic-Indic and thousands-separator stripped).
     const normalized = Tafgeet.validateInput(digit, currency);
     this.currency = currency;
     this.splitted = normalized.split('.');
@@ -170,17 +156,13 @@ export class Tafgeet {
    * Validates and normalizes the constructor arguments. Returns the
    * canonical Latin-digit amount string for the constructor to consume.
    *
-   * Pre-1.1.0 invalid input either crashed deep inside parse() with a
-   * cryptic TypeError, or silently produced strings containing the
-   * literal word "undefined".
-   *
    * Accepts `unknown` because JS callers can pass values that violate
    * the public type signature — that's the whole point of validation.
    *
    * Throws:
-   *   TypeError  — wrong type, non-numeric string, null/undefined
-   *   RangeError — NaN, Infinity, negative, zero, or > 15 digits
-   *   Error      — unknown currency code
+   *   InvalidAmountError       — wrong type, non-numeric string, null/undefined
+   *   AmountOutOfRangeError    — NaN, Infinity, negative, zero, or > 15 digits
+   *   UnsupportedCurrencyError — unknown currency code
    */
   private static validateInput(digit: unknown, currency: unknown): string {
     if (digit === null || digit === undefined) {
@@ -241,17 +223,13 @@ export class Tafgeet {
    * Renders the amount as Arabic words, including the currency suffix
    * and the closing فقط لا غير.
    *
-   * @throws {Error} if the integer part is 16+ digits (kept for backward
-   *   compatibility — the constructor's stricter validation now catches
-   *   this earlier, so this branch is unreachable from current API use).
+   * @throws {AmountOutOfRangeError} if the integer part is 16+ digits.
+   *   Unreachable from normal API use — the constructor catches this
+   *   earlier — but kept as a safety net against reflection-based misuse.
    */
   parse(): string {
     const intStr = this.digit.toString();
     if (intStr.length >= 16) {
-      // Unreachable from public API since 1.1.0 (the constructor
-      // validator catches > 15 digits earlier with a clearer message),
-      // but kept as a safety net for anyone using `read()` directly
-      // or mutating the private `digit` field via reflection.
       throw new AmountOutOfRangeError('Tafgeet: integer part must be < 16 digits');
     }
 
@@ -292,10 +270,8 @@ export class Tafgeet {
       const cur = currencies[this.currency as keyof typeof currencies];
       str += ' ' + (this.digit >= 3 && this.digit <= 10 ? cur.plural : cur.singular);
       if (this.fraction !== 0) {
-        // Plural-vs-singular for the FRACTION word depends on the FRACTION
-        // value (3–10 → broken plural in Arabic), not on the integer part.
-        // Pre-1.1.0 this incorrectly gated on `this.digit`, so e.g.
-        // `1.05 EGP` returned "...وخمسة قرش" instead of "...وخمسة قروش".
+        // Arabic broken-plural rule: counts 3–10 take the plural form
+        // (قروش), everything else (1, 2, 11+) takes the singular (قرش).
         const fracWord = this.fraction >= 3 && this.fraction <= 10 ? cur.fractions : cur.fraction;
         str += ' و' + this.read(this.fraction) + ' ' + fracWord;
       }
@@ -317,18 +293,14 @@ export class Tafgeet {
     return '';
   }
 
-  private length(): number {
-    return this.digit.toString().length;
-  }
-
-  // Maps digit-count -> starting column index.
-  // 1–3 digits: hundreds-only (handled separately in parse(), returns 0).
-  // 4–6 digits: thousands (column 3).
-  // 7–9 digits: millions (column 2).
-  // 10–12 digits: billions (column 1).
-  // 13–15 digits: trillions (column 0).
+  // Maps digit-count of the integer part -> starting column index.
+  //   1–3 digits:  hundreds-only (handled separately in parse(); returns 0).
+  //   4–6 digits:  thousands  (column 3)
+  //   7–9 digits:  millions   (column 2)
+  //   10–12 digits: billions  (column 1)
+  //   13–15 digits: trillions (column 0)
   private getColumnIndex(): number {
-    const len = this.length();
+    const len = this.digit.toString().length;
     if (len <= 3) return 0;
     if (len <= 6) return 3;
     if (len <= 9) return 2;

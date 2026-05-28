@@ -1,9 +1,6 @@
 /**
  * Public type definitions for the tafgeet-arabic package.
- *
- * Available via the top-level package import:
- *
- *   import { Tafgeet, Currency, Currencies, NumberProperties } from 'tafgeet-arabic';
+ * All types here are re-exported from the package root.
  */
 
 /**
