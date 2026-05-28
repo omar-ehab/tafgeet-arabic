@@ -1,6 +1,6 @@
 import { COLUMN_PROPERTIES, columns, currencies, HUNDREDS, ONES, TEENS, TENS } from './constants';
 import { AmountOutOfRangeError, InvalidAmountError, UnsupportedCurrencyError } from './errors';
-import { CurrencyInput } from './types';
+import { CurrencyInput, RoundingMode, TafgeetOptions } from './types';
 
 // Re-export public types + runtime helpers so consumers can import them
 // directly:
@@ -11,8 +11,19 @@ import { CurrencyInput } from './types';
 //     InvalidAmountError, AmountOutOfRangeError, UnsupportedCurrencyError,
 //     isTafgeetError,
 //   } from 'tafgeet-arabic';
-//   import type { Currency, Currencies, CurrencyCode, CurrencyInput, NumberProperties, TafgeetErrorCode } from 'tafgeet-arabic';
-export type { Currency, Currencies, CurrencyCode, CurrencyInput, NumberProperties } from './types';
+//   import type {
+//     Currency, Currencies, CurrencyCode, CurrencyInput,
+//     NumberProperties, RoundingMode, TafgeetOptions, TafgeetErrorCode,
+//   } from 'tafgeet-arabic';
+export type {
+  Currency,
+  Currencies,
+  CurrencyCode,
+  CurrencyInput,
+  NumberProperties,
+  RoundingMode,
+  TafgeetOptions,
+} from './types';
 export { SUPPORTED_CURRENCIES } from './constants';
 export {
   InvalidAmountError,
@@ -28,15 +39,17 @@ export class Tafgeet {
   private fraction: number;
   private digit: number;
 
-  constructor(digit: string | number, currency: CurrencyInput = 'EGP') {
+  constructor(digit: string | number, currency: CurrencyInput = 'EGP', options: TafgeetOptions = {}) {
     // validateInput normalizes Arabic-Indic digits, strips thousands
     // separators, and returns the canonical Latin-digit string. Throws
     // a typed error on any malformed input.
     const normalized = Tafgeet.validateInput(digit, currency);
     this.currency = currency;
     this.splitted = normalized.split('.');
-    this.digit = parseInt(this.splitted[0] ?? '0', 10);
-    this.fraction = this.parseFraction(this.splitted[1], currency);
+    const intValue = parseInt(this.splitted[0] ?? '0', 10);
+    const { fracValue, intCarry } = this.parseFraction(this.splitted[1], currency, options.rounding ?? 'truncate');
+    this.digit = intValue + intCarry;
+    this.fraction = fracValue;
   }
 
   /**
@@ -81,22 +94,76 @@ export class Tafgeet {
    * Parses the fractional portion of the amount.
    *
    *   undefined / ""    -> 0
-   *   1 digit  ("2")    -> 2           (literal, no padding — historical
-   *                                     behavior preserved for backward
-   *                                     compatibility; "1.2 EGP" still
-   *                                     renders as "1 pound and 2 piaster",
-   *                                     not "20 piaster")
-   *   2 digits ("20")   -> 20
-   *   3+ digits         -> truncated to the currency's decimals count
-   *                        ("1.999 SDG"  -> 99,  decimals=2)
-   *                        ("1.456 TND"  -> 456, decimals=3)
+   *   length <= decimals  -> literal parse, no rounding
+   *                          ("1.2 EGP" -> 2, NOT 20 — historical
+   *                           behavior preserved for backward compat)
+   *   length >  decimals  -> rounding applied per `mode`. May carry
+   *                          into the integer part (e.g. 1.995 EGP
+   *                          with mode='round' -> { fracValue: 0,
+   *                          intCarry: 1 }, rendered as 2 EGP).
+   *
+   * The `mode='truncate'` default reproduces v1.1.x output byte-for-byte
+   * for every existing input.
    */
-  private parseFraction(fracStr: string | undefined, currency: string): number {
-    if (!fracStr) return 0;
-    if (fracStr.length <= 2) return parseInt(fracStr, 10);
-
+  private parseFraction(
+    fracStr: string | undefined,
+    currency: string,
+    mode: RoundingMode,
+  ): { fracValue: number; intCarry: number } {
+    if (!fracStr) return { fracValue: 0, intCarry: 0 };
     const decimals = currencies[currency as keyof typeof currencies]?.decimals ?? 2;
-    return parseInt(fracStr.slice(0, decimals), 10);
+
+    if (fracStr.length <= decimals) {
+      return { fracValue: parseInt(fracStr, 10), intCarry: 0 };
+    }
+
+    const keep = fracStr.slice(0, decimals);
+    const drop = fracStr.slice(decimals);
+    const kept = parseInt(keep, 10);
+    const fracValue = kept + Tafgeet.computeRoundingCarry(drop, keep, mode);
+
+    // Handle overflow: rounding pushed the fraction to 10^decimals,
+    // which represents +1 of the main unit (e.g. 100 piasters = 1 pound).
+    const max = 10 ** decimals;
+    if (fracValue >= max) {
+      return { fracValue: 0, intCarry: 1 };
+    }
+    return { fracValue, intCarry: 0 };
+  }
+
+  /**
+   * Computes whether to add 1 to the kept-fraction value based on the
+   * dropped digits and the rounding mode. Pure integer arithmetic on
+   * strings — no floating-point hazards.
+   *
+   *   drop = the dropped digit string (everything past `decimals`)
+   *   keep = the digits we're keeping (used by `bankers` for parity)
+   */
+  private static computeRoundingCarry(drop: string, keep: string, mode: RoundingMode): number {
+    if (mode === 'truncate' || mode === 'floor') return 0;
+
+    const firstDropDigit = parseInt(drop.charAt(0), 10);
+
+    if (mode === 'ceil') {
+      // Any non-zero in the dropped digits forces a carry.
+      return /[1-9]/.test(drop) ? 1 : 0;
+    }
+    if (mode === 'round') {
+      // Standard half-up rounding.
+      return firstDropDigit >= 5 ? 1 : 0;
+    }
+    if (mode === 'bankers') {
+      // Round half to even — only special when the dropped value is
+      // EXACTLY 0.5 (first digit 5, all subsequent zero). Otherwise
+      // behaves like round-half-up.
+      const isExactlyHalf = firstDropDigit === 5 && /^0*$/.test(drop.slice(1));
+      if (isExactlyHalf) {
+        const lastKept = parseInt(keep.charAt(keep.length - 1), 10);
+        return lastKept % 2 === 1 ? 1 : 0;
+      }
+      return firstDropDigit >= 5 ? 1 : 0;
+    }
+    return 0;
   }
 
   /**

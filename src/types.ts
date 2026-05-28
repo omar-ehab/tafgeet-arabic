@@ -75,3 +75,33 @@ export type CurrencyCode = keyof Currencies;
  * arbitrary string inputs (see microsoft/TypeScript#29729).
  */
 export type CurrencyInput = CurrencyCode | '' | (string & {});
+
+/**
+ * How to handle decimal digits beyond the currency's natural precision.
+ *
+ *   'truncate' (default) — drop extra digits (equivalent to `floor` for
+ *                          non-negative amounts). Preserves the v1.1.x
+ *                          default behavior exactly.
+ *   'round'              — round half up (the "schoolbook" rule).
+ *                          1.235 -> 1.24 for 2-decimal currencies.
+ *   'floor'              — round toward 0. Same as `truncate` for the
+ *                          non-negative inputs this library accepts.
+ *   'ceil'               — round toward +∞. Any non-zero dropped digit
+ *                          carries a 1.
+ *   'bankers'            — IEEE 754 "round half to even". Reduces
+ *                          cumulative bias in long sequences of additions;
+ *                          common in financial accounting.
+ */
+export type RoundingMode = 'truncate' | 'round' | 'floor' | 'ceil' | 'bankers';
+
+/**
+ * Optional third argument to the Tafgeet constructor.
+ *
+ * Reserved for future expansion. The current v1.2 release ships only
+ * `rounding`; `precision` and other linguistic options (`feminine`,
+ * `accusative`, `style`) are planned for v1.3+.
+ */
+export interface TafgeetOptions {
+  /** See {@link RoundingMode}. Defaults to `'truncate'`. */
+  rounding?: RoundingMode;
+}
