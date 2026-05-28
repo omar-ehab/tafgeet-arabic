@@ -10,3 +10,4 @@ node_modules
 
 # Untracked but kept locally
 CODE_OF_CONDUCT.md
+PLAN-*.md
