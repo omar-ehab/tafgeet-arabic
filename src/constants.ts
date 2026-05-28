@@ -76,14 +76,8 @@ export const currencies: Currencies = {
 export const columns: readonly string[] = ['trillions', 'billions', 'millions', 'thousands'];
 
 /**
- * Runtime-accessible list of built-in currency codes. Useful for
- * iterating supported currencies or validating user input without
- * a try/catch around the constructor.
- *
- *   if (SUPPORTED_CURRENCIES.includes(userInput as CurrencyCode)) { ... }
- *
- * Kept in sync with the `Currencies` interface; if you ever bundle
- * a new currency, add it here AND to `Currencies` AND to `currencies`.
+ * Runtime list of built-in currency codes — frozen, iterable, includes()-able.
+ * Keep in sync with the `Currencies` interface and `currencies` map.
  */
 export const SUPPORTED_CURRENCIES: readonly CurrencyCode[] = Object.freeze([
   'SDG',
@@ -99,10 +93,8 @@ export const SUPPORTED_CURRENCIES: readonly CurrencyCode[] = Object.freeze([
 ]);
 
 // -- Number-word dictionaries -------------------------------------------------
-// Indexed by the digit value (1-9 for ones, etc.) so callers can do
-// `ONES[d]` instead of building a `_<n>` key by string concatenation.
-// All dictionaries are frozen at module load so they're shared across every
-// Tafgeet instance rather than allocated per-constructor call.
+// Indexed by digit value (e.g. `ONES[5]`). Frozen + module-level so every
+// Tafgeet instance shares the same reference instead of re-allocating.
 
 export const ONES: Readonly<Record<number, string>> = Object.freeze({
   1: 'واحد',
@@ -176,8 +168,7 @@ export const TRILLIONS: Readonly<NumberProperties> = Object.freeze({
   plural: 'ترليونات',
 });
 
-// Maps column name -> the NumberProperties for that column.
-// Used by the parse() loop to look up the correct suffix per group.
+// Column name -> NumberProperties, used by parse() to pick the suffix word.
 export const COLUMN_PROPERTIES: Readonly<Record<string, Readonly<NumberProperties>>> = Object.freeze({
   trillions: TRILLIONS,
   billions: BILLIONS,
