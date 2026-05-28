@@ -252,6 +252,13 @@ export class Tafgeet {
    */
   parse(): string {
     const intStr = this.digit.toString();
+    // Re-validate the internal state — guards against post-construction
+    // mutation (private fields are TS-only, accessible at runtime via
+    // reflection). The constructor already validates these, so this only
+    // fires if someone mutated `this.digit` between construction and parse.
+    if (!Number.isInteger(this.digit) || this.digit < 1) {
+      throw new AmountOutOfRangeError(`Tafgeet: integer part must be >= 1, got ${this.digit}`);
+    }
     if (intStr.length >= 16) {
       throw new AmountOutOfRangeError('Tafgeet: integer part must be < 16 digits');
     }
@@ -306,12 +313,23 @@ export class Tafgeet {
    * Renders a value 0–999 as Arabic words (without any column/currency suffix).
    * Exposed publicly for use as a low-level helper; for whole amounts, use
    * `parse()` instead.
+   *
+   * `0` returns `''` (no Arabic word for zero in this dictionary).
+   *
+   * @throws {InvalidAmountError} if `d` is not a finite integer
+   * @throws {AmountOutOfRangeError} if `d` is outside the `0..999` range
    */
   read(d: number): string {
+    if (typeof d !== 'number' || !Number.isFinite(d) || !Number.isInteger(d)) {
+      throw new InvalidAmountError(`Tafgeet.read: argument must be a finite integer, got ${String(d)}`);
+    }
+    if (d < 0 || d > 999) {
+      throw new AmountOutOfRangeError(`Tafgeet.read: argument must be in 0..999, got ${d}`);
+    }
+    if (d === 0) return '';
     if (d < 10) return this.readOnes(d);
     if (d < 100) return this.readTens(d);
-    if (d < 1000) return this.readHundreds(d);
-    return '';
+    return this.readHundreds(d);
   }
 
   // Maps digit-count of the integer part -> starting column index.
