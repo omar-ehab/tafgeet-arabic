@@ -183,6 +183,18 @@ export class Tafgeet {
         throw new AmountOutOfRangeError(`Tafgeet: amount must be non-negative, got ${digit}`);
       }
       normalized = digit.toString();
+      // Numbers >= 1e21 or < 1e-6 stringify in scientific notation
+      // (e.g. "1e+21", "1.79e+308", "5e-324"). Pre-1.2.1 these slipped
+      // past validation and parseFraction silently corrupted the output
+      // (Number.MAX_VALUE rendered as "1.79 EGP"). Reject them here and
+      // tell the caller how to recover.
+      if (!/^\d+(\.\d+)?$/.test(normalized)) {
+        throw new AmountOutOfRangeError(
+          `Tafgeet: number ${digit} is outside the representable decimal range ` +
+            `(stringifies via scientific notation to "${normalized}"). ` +
+            `Pass the value as a string for full precision, e.g. \`"${digit.toFixed(0)}"\`.`,
+        );
+      }
     } else {
       // Normalize first (Arabic-Indic digits, thousands separators, etc.)
       // BEFORE the format regex — otherwise a perfectly valid Arabic
