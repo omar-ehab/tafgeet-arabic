@@ -118,7 +118,7 @@ try {
   new Tafgeet(1, 'XYZ');
 } catch (err) {
   // err instanceof Error
-  // err.message === 'Tafgeet: unknown currency "XYZ". Supported: SDG, SAR, QAR, AED, EGP, KWD, USD, AUD, TND, TRY'
+  // err.message === 'Tafgeet: unknown currency "XYZ". Supported: SDG, SAR, QAR, AED, EGP, KWD, USD, AUD, TND, TRY, BHD, OMR, JOD, IQD, LYD, LBP, MAD, DZD, SYP, YER, EUR, GBP, CHF, CAD'
 }
 ```
 
