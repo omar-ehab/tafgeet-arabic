@@ -5,6 +5,108 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] – 2026-05-28
+
+A packaging, types, and ergonomics release. **No breaking API changes.**
+Every input that worked in v1.1.0 produces byte-identical output here —
+verified by 262 snapshot assertions covering the full currency × magnitude
+matrix.
+
+### Added
+
+- **Dual ESM + CJS build via `tsup`.** Consumers using `import` get the
+  `.mjs` entry; consumers using `require` get the `.cjs` entry. Bundlers
+  (Vite, esbuild, webpack, Next.js, Rollup) auto-resolve via the
+  `exports` map. `sideEffects: false` enables aggressive tree-shaking.
+  Both entries verified via the new CJS + ESM smoke tests.
+- **`CurrencyCode` union type** — `'EGP' | 'SAR' | … | 'TRY'`, derived
+  from `keyof Currencies` so it stays in sync automatically:
+  ```ts
+  import type { CurrencyCode } from 'tafgeet-arabic';
+  function quote(amount: number, code: CurrencyCode) { ... }
+  ```
+  IDE autocompletes all 10 codes; typos caught at compile time.
+- **`CurrencyInput` type** — what the constructor's second argument
+  accepts: `CurrencyCode | '' | (string & {})`. The `(string & {})`
+  intersection preserves autocomplete while still permitting arbitrary
+  strings (for codes coming from APIs the type system can't know
+  about). Runtime validator still rejects unregistered codes.
+- **`SUPPORTED_CURRENCIES`** — frozen runtime array of the 10 built-in
+  codes. Useful for iteration / pre-validation:
+  ```ts
+  if (SUPPORTED_CURRENCIES.includes(userInput as CurrencyCode)) { ... }
+  ```
+- **Arabic-Indic + thousands-separator input.** The constructor now
+  accepts:
+  - Arabic-Indic digits — `'١٢٣٤.٥٦'` (U+0660..U+0669)
+  - Eastern Arabic-Indic — `'۱۲۳۴.۵۶'` (U+06F0..U+06F9, Farsi/Urdu)
+  - Arabic decimal separator — `'1234٫56'` (U+066B)
+  - Arabic thousands separator — `'1٬234'` (U+066C)
+  - Comma thousands separator — `'1,234.56'` (English)
+  - Underscore separator — `'1_234_567'` (JS numeric literal style)
+  - Whitespace separators — `'1 234 567'` (plus NBSP, narrow NBSP,
+    thin space — for pasted-from-word-processor input)
+  - Any combination of the above.
+- **Custom error classes with discriminated codes:**
+  - `InvalidAmountError extends TypeError` (code `'INVALID_AMOUNT'`)
+  - `AmountOutOfRangeError extends RangeError` (code `'AMOUNT_OUT_OF_RANGE'`)
+  - `UnsupportedCurrencyError extends Error` (code `'UNSUPPORTED_CURRENCY'`)
+  - `isTafgeetError(e): e is …` type-guard for catching any error from
+    this package.
+  - `TafgeetErrorCode` discriminated union of the codes.
+
+  Every class extends its corresponding built-in, so every existing
+  `instanceof TypeError` / `instanceof RangeError` pattern keeps working.
+- **`rounding` constructor option** — third argument selects how
+  over-precision decimals are handled:
+  ```ts
+  new Tafgeet('1.995', 'EGP', { rounding: 'round' }).parse();
+  // → 'ٱثنين جنيه مصري فقط لا غير'   (rounds 1.995 → 2)
+  ```
+  Modes: `'truncate'` *(default — preserves v1.1 behavior)*, `'round'`,
+  `'floor'`, `'ceil'`, `'bankers'` (IEEE 754 half-to-even).
+  Rounding can carry into the integer part; all arithmetic is
+  integer-only on string slices, no floating-point hazards.
+- **`RoundingMode` and `TafgeetOptions` exported types** — structured
+  for future expansion (`precision`, `feminine`, `accusative`, `style`
+  planned for v1.3+ alongside the currency registry).
+
+### Changed
+
+- **Snapshot tests** added — 262 entries covering the full (currency ×
+  magnitude) matrix. Any future PR that changes a parse() output must
+  visibly modify `test/snapshots/parse.snap.json`. Foundation for safely
+  adding grammar/style options later.
+- **`validateInput`** now returns the canonical normalized string
+  instead of returning void; the constructor consumes the return value
+  rather than re-`.toString().split('.')`-ing the original input.
+- **README** rewritten with the v1.2 API surface (types, errors, rounding).
+- **Internal cleanup pass** — removed redundant import-example comments,
+  stale historical tangents, the single-call `length()` private method,
+  and outdated JSDoc `@throws` annotations.
+
+### Removed
+
+- Nothing public. Two minor internal tidies:
+  - The single-call `length()` private method (inlined).
+  - A 13-line redundant import-example comment block at the top of
+    `src/index.ts`.
+
+### Test count
+
+| Release | Tests |
+|---|---|
+| v1.1.0 | 107 |
+| v1.2.0 | **465** (107 original + 262 snapshot + 96 new across CurrencyCode, flexible input, error classes, rounding) |
+
+### Deferred to v1.3
+
+- `precision` option (needs the currency registry to be meaningful).
+- Currency registry (`registerCurrency` / `getCurrency`).
+- Grammar options (`feminine`, `accusative`, `legal`, style modes).
+  These need native-speaker review before shipping; tracked as a
+  separate workstream.
+
 ## [1.1.0] – 2026-05-27
 
 A correctness, performance, and developer-experience release.

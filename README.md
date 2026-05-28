@@ -13,8 +13,10 @@ new Tafgeet('1234.56', 'EGP').parse();
 ```
 
 - ⚡ ~900,000 ops/sec — pure JS, zero runtime dependencies
-- 📦 ~6 kB gzipped, ships TypeScript `.d.ts` files
-- 🛡 Strict input validation with typed `TypeError` / `RangeError`
+- 📦 Dual **ESM + CJS** build, ships TypeScript `.d.ts` files, `sideEffects: false`
+- 🛡 Typed error classes (`InvalidAmountError`, `AmountOutOfRangeError`, …) with discriminated `code` fields
+- 🔢 Accepts Latin, Arabic-Indic (`١٢٣`), Eastern Arabic-Indic (`۱۲۳`), commas, spaces, underscores
+- ➗ Configurable rounding (`'round'`, `'floor'`, `'ceil'`, `'bankers'`, `'truncate'`)
 - 🌍 10 currencies: EGP, SAR, QAR, AED, KWD, USD, AUD, SDG, TND, TRY
 
 ## Requirements
@@ -69,6 +71,37 @@ new Tafgeet('7564654', '').parse();
 // → 'سبعة ملايين وخمسمائة وأربعة وستون ألف وستمائة وأربعة وخمسون فقط لا غير'
 ```
 
+### Flexible input formats
+
+Beyond plain Latin (`'1234.56'`), the constructor accepts amounts in many forms — useful for input from Arabic forms, CSVs, copy-pasted spreadsheets, etc.:
+
+```ts
+new Tafgeet('١٢٣٤.٥٦').parse();          // Arabic-Indic digits
+new Tafgeet('۱۲۳۴.۵۶').parse();          // Eastern Arabic-Indic (Farsi/Urdu)
+new Tafgeet('1,234.56').parse();         // ASCII comma
+new Tafgeet('1_234_567').parse();        // JS underscore separator
+new Tafgeet('1 234 567').parse();        // space (regular / NBSP / narrow NBSP)
+new Tafgeet('١٬٥٠٠٫٢٥', 'EGP').parse(); // fully Arabic with Arabic separators
+// All produce the same output as the plain-Latin equivalent.
+```
+
+### Rounding
+
+By default decimals beyond the currency's precision are **truncated** (preserving v1.1 behavior byte-for-byte). Opt in to other modes via the third constructor argument:
+
+```ts
+new Tafgeet('1.995', 'EGP', { rounding: 'round' }).parse();
+// → 'ٱثنين جنيه مصري فقط لا غير'   (1.995 rounded to 2.00)
+
+new Tafgeet('1.001', 'EGP', { rounding: 'ceil' }).parse();
+// → 'واحد جنيه مصري وواحد قرش فقط لا غير'
+
+new Tafgeet('1.225', 'EGP', { rounding: 'bankers' }).parse();
+// → 'واحد جنيه مصري وٱثنين وعشرون قرش فقط لا غير'  (half-to-even)
+```
+
+Available modes: `'truncate'` (default), `'round'` (half-up), `'floor'`, `'ceil'`, `'bankers'` (IEEE 754 half-to-even — recommended for accounting).
+
 ### Error handling
 
 Invalid input throws a typed error rather than producing garbage output:
@@ -96,28 +129,50 @@ See [API → Errors](#errors) for the full list.
 All public types are re-exported from the package entry point:
 
 ```ts
-import { Tafgeet, Currency, Currencies, NumberProperties } from 'tafgeet-arabic';
-
-const cur: Currency = {
-  singular: 'دينار',
-  plural: 'دنانير',
-  fraction: 'فلس',
-  fractions: 'فلوس',
-  decimals: 3,
-};
+import {
+  Tafgeet,
+  SUPPORTED_CURRENCIES,
+  isTafgeetError,
+  InvalidAmountError,
+  AmountOutOfRangeError,
+  UnsupportedCurrencyError,
+} from 'tafgeet-arabic';
+import type {
+  Currency,
+  Currencies,
+  CurrencyCode,
+  CurrencyInput,
+  NumberProperties,
+  RoundingMode,
+  TafgeetOptions,
+  TafgeetErrorCode,
+} from 'tafgeet-arabic';
 ```
 
 ## API
 
-### `new Tafgeet(amount, currency?)`
+### `new Tafgeet(amount, currency?, options?)`
 
 Creates a new `Tafgeet` instance. The constructor validates the input
-eagerly and throws if anything is malformed.
+eagerly and throws a typed error if anything is malformed.
 
 | Parameter | Type | Default | Notes |
 |---|---|---|---|
-| `amount` | `string \| number` | — | Integer part must be **≥ 1** and **≤ 15 digits**. Pass a string to avoid float precision loss. |
-| `currency` | `string` | `'EGP'` | ISO-style code from the [supported currencies](#supported-currencies), or `''` for no-currency mode. |
+| `amount` | `string \| number` | — | Integer part must be **≥ 1** and **≤ 15 digits**. Pass a string to avoid float precision loss. Arabic-Indic digits and thousands separators are accepted. |
+| `currency` | `CurrencyInput` | `'EGP'` | A `CurrencyCode`, an empty string for no-currency mode, or any string (runtime validated). |
+| `options` | `TafgeetOptions` | `{}` | See [Options](#options) below. |
+
+### Options
+
+```ts
+interface TafgeetOptions {
+  rounding?: 'truncate' | 'round' | 'floor' | 'ceil' | 'bankers';
+}
+```
+
+| Option | Default | Behavior |
+|---|---|---|
+| `rounding` | `'truncate'` | How to handle decimals beyond the currency's natural precision. `'truncate'` preserves v1.1 behavior exactly. `'round'` is half-up. `'bankers'` is IEEE 754 half-to-even (recommended for accounting). Rounding can carry into the integer part (`1.995 EGP` with `'round'` → `2 EGP`). |
 
 ### `.parse(): string`
 
@@ -127,6 +182,9 @@ and the closing `فقط لا غير`.
 ```ts
 new Tafgeet('123.45', 'EGP').parse();
 // → 'مائة وثلاثة وعشرون جنيه مصري وخمسة وأربعون قرش فقط لا غير'
+
+new Tafgeet('1.995', 'EGP', { rounding: 'round' }).parse();
+// → 'ٱثنين جنيه مصري فقط لا غير'  (rounded up)
 ```
 
 ### `.read(d: number): string`
@@ -143,11 +201,33 @@ t.read(999); // → 'تسعمائة وتسعة وتسعون'
 
 ### Errors
 
-| Class | When |
-|---|---|
-| `TypeError` | `amount` is `null`, `undefined`, the wrong type, a non-numeric string, empty string, or scientific notation. Also thrown when `currency` is not a string. |
-| `RangeError` | `amount` is `NaN`, `Infinity`, negative, zero (integer part < 1), or has more than 15 integer digits. |
-| `Error` | `currency` is not one of the supported codes. |
+Each error class extends the appropriate built-in, so existing
+`instanceof TypeError` / `RangeError` checks keep working. The
+`code` field allows structured handling:
+
+| Class | Extends | `code` | When |
+|---|---|---|---|
+| `InvalidAmountError` | `TypeError` | `'INVALID_AMOUNT'` | `amount` is `null`, `undefined`, wrong type, non-numeric string, empty string, or scientific notation. Also thrown when `currency` is not a string. |
+| `AmountOutOfRangeError` | `RangeError` | `'AMOUNT_OUT_OF_RANGE'` | `amount` is `NaN`, `Infinity`, negative, zero (integer part < 1), or has more than 15 integer digits. |
+| `UnsupportedCurrencyError` | `Error` | `'UNSUPPORTED_CURRENCY'` | `currency` is a string but not one of the codes in `SUPPORTED_CURRENCIES`. |
+
+```ts
+import { isTafgeetError } from 'tafgeet-arabic';
+
+try {
+  new Tafgeet(input, currency).parse();
+} catch (e) {
+  if (isTafgeetError(e)) {
+    switch (e.code) {
+      case 'INVALID_AMOUNT':       reportToUser('Bad number');   break;
+      case 'AMOUNT_OUT_OF_RANGE':  reportToUser('Out of range'); break;
+      case 'UNSUPPORTED_CURRENCY': reportToUser('Bad currency'); break;
+    }
+  } else {
+    throw e;
+  }
+}
+```
 
 ## Supported currencies
 
@@ -168,20 +248,22 @@ Missing a currency? [Open an issue](https://github.com/omar-ehab/tafgeet-arabic/
 
 ## Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md). Highlights of **v1.1.0**:
+See [CHANGELOG.md](./CHANGELOG.md). Highlights of **v1.2.0**:
 
-- **3.5–4.7× faster** across all input sizes
-- **52% smaller** install (test files no longer shipped)
-- Fixes for issues [#7](https://github.com/omar-ehab/tafgeet-arabic/issues/7), [#8](https://github.com/omar-ehab/tafgeet-arabic/issues/8), and the fraction singular/plural rule
-- **KWD (Kuwaiti Dinar)** added
-- **Input validation** with typed errors
-- TypeScript types now ship and are re-exported from the package root
+- **Dual ESM + CJS build** with proper `exports` map and `sideEffects: false`
+- **`CurrencyCode` union type** + **`SUPPORTED_CURRENCIES`** runtime array
+- **Arabic-Indic digits & thousands separators** accepted (`'١٬٥٠٠٫٢٥'`, `'1,500.25'`, `'1_500'`, …)
+- **Custom error classes** with discriminated `code` fields (still `instanceof TypeError` etc.)
+- **`rounding` option** — `'truncate'` *(default, preserves v1.1 behavior)*, `'round'`, `'floor'`, `'ceil'`, `'bankers'`
+- **262 snapshot tests** locking in every existing output against future regression
+
+Earlier: **v1.1.0** — 3.5–4.7× faster, 52% smaller install, fixes for issues [#7](https://github.com/omar-ehab/tafgeet-arabic/issues/7) / [#8](https://github.com/omar-ehab/tafgeet-arabic/issues/8) / fraction-plural, KWD added, input validation.
 
 ## Roadmap
 
-- More currencies (BHD, OMR, JOD, IQD, LBP, MAD, DZD, …)
-- Native-speaker grammar review of dictionaries (dual form for 2, classical inflection for 11–99)
-- Optional functional API: `tafgeet(amount, currency?)` alongside the class
+- **v1.3:** currency registry (`registerCurrency`), `precision` option, more currencies (BHD, OMR, JOD, IQD, LBP, MAD, DZD, …)
+- **v1.4:** grammar options (`feminine`, `accusative`, `style: 'simple' | 'formal' | 'banking'`) — pending native-speaker review of the dictionaries
+- Optional: functional API `tafgeet(amount, currency?)` alongside the class
 
 ## Contributing
 
@@ -191,9 +273,9 @@ PRs and issues welcome. To set up locally:
 git clone https://github.com/omar-ehab/tafgeet-arabic
 cd tafgeet-arabic
 npm install
-npm test               # 107 mocha tests
+npm test               # 465 tests (107 unit + 262 snapshot + 96 feature)
 npm run lint           # ESLint
-npm run test:js-compat # plain-JS smoke test against built dist/
+npm run test:js-compat # CJS + ESM smoke tests against built dist/
 ```
 
 ## License
