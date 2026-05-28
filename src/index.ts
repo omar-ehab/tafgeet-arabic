@@ -27,6 +27,7 @@ export class Tafgeet {
   private digit: number;
 
   constructor(digit: string | number, currency: CurrencyInput = 'EGP', options: TafgeetOptions = {}) {
+    Tafgeet.validateOptions(options);
     // Format + type validation runs early; integer-range validation runs
     // AFTER rounding so that e.g. `'0.999'` with rounding `'round'` can
     // legitimately carry into integer 1 instead of being rejected as < 1.
@@ -39,6 +40,36 @@ export class Tafgeet {
     Tafgeet.validateIntegerRange(finalInt, normalized);
     this.digit = finalInt;
     this.fraction = fracValue;
+  }
+
+  /**
+   * Validates the optional 3rd constructor argument. Strict: rejects
+   * non-plain-objects, unknown keys (catches typos like `Rounding`),
+   * and invalid `rounding` values. JS callers can pass anything;
+   * this catches the misuses TS would have prevented at compile time.
+   */
+  private static validateOptions(options: unknown): void {
+    if (options === undefined) return; // omitted → use defaults
+    if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+      throw new InvalidAmountError(
+        `Tafgeet: options must be a plain object, got ${options === null ? 'null' : Array.isArray(options) ? 'array' : typeof options}`,
+      );
+    }
+    const allowedKeys = new Set(['rounding']);
+    for (const key of Object.keys(options)) {
+      if (!allowedKeys.has(key)) {
+        throw new InvalidAmountError(`Tafgeet: unknown option "${key}". Supported: ${[...allowedKeys].join(', ')}`);
+      }
+    }
+    const rounding = (options as { rounding?: unknown }).rounding;
+    if (rounding !== undefined) {
+      const allowedModes: ReadonlySet<string> = new Set(['truncate', 'round', 'floor', 'ceil', 'bankers']);
+      if (typeof rounding !== 'string' || !allowedModes.has(rounding)) {
+        throw new InvalidAmountError(
+          `Tafgeet: options.rounding must be one of [${[...allowedModes].join(', ')}], got ${JSON.stringify(rounding)}`,
+        );
+      }
+    }
   }
 
   /**
