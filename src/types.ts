@@ -1,6 +1,11 @@
 /**
- * Type definitions for the tafgeet-arabic package. Most are re-exported from
- * the package root; `CountedNoun` is an internal helper used by the renderer.
+ * Type definitions for the tafgeet-arabic package.
+ *
+ * The re-exported public types are `NumberProperties`, `Currency`,
+ * `Currencies`, `CurrencyCode`, `CurrencyInput`, `RoundingMode`, and
+ * `TafgeetOptions`. `Gender`, `CurrencyEntry`, and `CountedNoun` are internal
+ * helpers used by the renderer and the currency data — not part of the public
+ * API.
  */
 
 /**
@@ -15,33 +20,38 @@ export type NumberProperties = {
   plural: string;
 };
 
-/** Grammatical gender of a counted noun — drives number agreement. */
+/** Grammatical gender of a counted noun — drives number agreement (internal). */
 export type Gender = 'm' | 'f';
 
 /**
- * Arabic forms + decimal precision for a single currency.
- *
- * Both the main unit and the fractional unit carry the four counted-noun
- * forms Arabic grammar needs plus their intrinsic gender:
- *   - `singular`  — count 1 / 11+ / round 100·1000 (e.g. جنيه)
- *   - `dual`      — count 2, the dual noun incl. its adjective (e.g. جنيهان مصريان)
+ * Public Arabic forms + decimal precision for a single currency.
+ *   - `singular`  — count 1 / 11+ / round 100·1000 (e.g. جنيه مصري)
  *   - `plural`    — counts 3–10 (e.g. جنيهات مصرية)
- *   - `gender`    — fixed gender of the unit; the number 3–10 takes the
- *                   opposite form, 1/2 agree. `جنيه` is `'m'`, `ليرة` is `'f'`.
+ *   - `fraction` / `fractions` — the fractional unit, singular / plural
+ *   - `decimals`  — fractional precision (2 or 3)
  */
 export type Currency = {
   singular: string;
-  dual: string;
   plural: string;
-  gender: Gender;
   fraction: string;
-  fractionDual: string;
   fractions: string;
-  fractionGender: Gender;
   decimals: number;
 };
 
-/** The four counted-noun forms + gender that drive Arabic number agreement. */
+/**
+ * Internal currency record. Extends the public {@link Currency} with the dual
+ * forms and the intrinsic gender of each unit (the renderer needs these for
+ * agreement). Kept off the public API so adding it was not a breaking change
+ * to the exported `Currency` shape.
+ */
+export type CurrencyEntry = Currency & {
+  dual: string;
+  gender: Gender;
+  fractionDual: string;
+  fractionGender: Gender;
+};
+
+/** The forms + gender the renderer needs to agree a number with its noun (internal). */
 export type CountedNoun = {
   singular: string;
   dual: string;

@@ -8,7 +8,6 @@ export type {
   Currencies,
   CurrencyCode,
   CurrencyInput,
-  Gender,
   NumberProperties,
   RoundingMode,
   TafgeetOptions,

@@ -1,6 +1,6 @@
-import { CurrencyCode, Currencies, NumberProperties } from './types';
+import { CurrencyCode, CurrencyEntry, NumberProperties } from './types';
 
-export const currencies: Currencies = {
+export const currencies: Record<CurrencyCode, CurrencyEntry> = {
   SDG: {
     singular: 'جنيه سوداني',
     dual: 'جنيهان سودانيان',

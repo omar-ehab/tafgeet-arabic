@@ -47,8 +47,10 @@ options. Gender is derived from each built-in currency, never configured.
 
 ### Internal
 
-- Number dictionaries gained feminine variants (`ONES_F`, `TEENS_F`); each
-  currency now carries `gender`, `dual`, `fractionDual`, `fractionGender`.
+- Number dictionaries gained feminine variants (`ONES_F`, `TEENS_F`); the
+  gender + dual forms each currency needs live on an internal `CurrencyEntry`
+  type, so the **public `Currency` type and the rest of the exported API are
+  unchanged** (no type-level breaking change).
 - Snapshot matrix expanded to exercise the masculine/feminine split
   exhaustively (added a feminine currency sweep + feminine-fraction cases);
   ~726 snapshot entries. New `test/grammar.spec.ts` pins the canonical forms.
