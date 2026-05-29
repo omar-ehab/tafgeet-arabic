@@ -9,10 +9,11 @@
 
 ```ts
 new Tafgeet('1234.56', 'EGP').parse();
-// → ألف ومائتين وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير
+// → ألف ومائتان وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير
 ```
 
 - ⚡ ~900,000 ops/sec — pure JS, zero runtime dependencies
+- ✅ Grammatically correct Arabic — full gender agreement & noun forms ([details](#arabic-grammar))
 - 📦 Dual **ESM + CJS** build, ships TypeScript `.d.ts` files, `sideEffects: false`
 - 🛡 Typed error classes (`InvalidAmountError`, `AmountOutOfRangeError`, …) with discriminated `code` fields
 - 🔢 Accepts Latin, Arabic-Indic (`١٢٣`), Eastern Arabic-Indic (`۱۲۳`), commas, spaces, underscores
@@ -41,7 +42,7 @@ import { Tafgeet } from 'tafgeet-arabic';
 const { Tafgeet } = require('tafgeet-arabic');
 
 new Tafgeet('1234.56').parse();
-// → 'ألف ومائتين وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير'
+// → 'ألف ومائتان وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير'
 ```
 
 > **Tip:** prefer passing the amount as a **string** (`'1234.56'`) over a JS number.
@@ -56,10 +57,10 @@ new Tafgeet('500', 'SAR').parse();
 // → 'خمسمائة ريال سعودي فقط لا غير'
 
 new Tafgeet('1.005', 'KWD').parse();  // Kuwaiti Dinar uses 3 decimals
-// → 'واحد دينار كويتي وخمسة فلوس فقط لا غير'
+// → 'دينار كويتي واحد وخمسة فلوس فقط لا غير'
 
 new Tafgeet('1234567', 'USD').parse();
-// → 'مليون ومائتين وأربعة وثلاثون ألف وخمسمائة وسبعة وستون دولار أمريكي فقط لا غير'
+// → 'مليون ومائتان وأربعة وثلاثون ألف وخمسمائة وسبعة وستون دولار أمريكي فقط لا غير'
 ```
 
 ### No-currency mode
@@ -91,13 +92,13 @@ By default decimals beyond the currency's precision are **truncated** (preservin
 
 ```ts
 new Tafgeet('1.995', 'EGP', { rounding: 'round' }).parse();
-// → 'ٱثنين جنيه مصري فقط لا غير'   (1.995 rounded to 2.00)
+// → 'جنيهان مصريان فقط لا غير'   (1.995 rounded to 2.00 → dual noun)
 
 new Tafgeet('1.001', 'EGP', { rounding: 'ceil' }).parse();
-// → 'واحد جنيه مصري وواحد قرش فقط لا غير'
+// → 'جنيه مصري واحد وقرش واحد فقط لا غير'
 
 new Tafgeet('1.225', 'EGP', { rounding: 'bankers' }).parse();
-// → 'واحد جنيه مصري وٱثنين وعشرون قرش فقط لا غير'  (half-to-even)
+// → 'جنيه مصري واحد واثنان وعشرون قرش فقط لا غير'  (half-to-even)
 ```
 
 Available modes: `'truncate'` (default), `'round'` (half-up), `'floor'`, `'ceil'`, `'bankers'` (IEEE 754 half-to-even — recommended for accounting).
@@ -184,17 +185,17 @@ new Tafgeet('123.45', 'EGP').parse();
 // → 'مائة وثلاثة وعشرون جنيه مصري وخمسة وأربعون قرش فقط لا غير'
 
 new Tafgeet('1.995', 'EGP', { rounding: 'round' }).parse();
-// → 'ٱثنين جنيه مصري فقط لا غير'  (rounded up)
+// → 'جنيهان مصريان فقط لا غير'  (rounded up to 2 → dual noun)
 ```
 
 ### `.read(d: number): string`
 
-Renders a number in `0–999` as Arabic words, with **no** column suffix and
-**no** currency. Useful for custom formatting.
+Renders a number in `0–999` as Arabic words (masculine), with **no** column
+suffix and **no** currency. Useful for custom formatting.
 
 ```ts
 const t = new Tafgeet('1');   // any instance
-t.read(42);  // → 'ٱثنين وأربعون'
+t.read(42);  // → 'اثنان وأربعون'
 t.read(100); // → 'مائة'
 t.read(999); // → 'تسعمائة وتسعة وتسعون'
 ```
@@ -228,6 +229,36 @@ try {
   }
 }
 ```
+
+## Arabic grammar
+
+Since **v1.4** the output is grammatically correct Modern Standard Arabic
+(فصحى), undiacritized (no tashkīl). The number agrees with the noun it counts —
+the currency unit for the integer part, the fractional unit for the fraction —
+and each built-in currency carries its own gender, so you never configure it.
+
+| Count | Rule | Masculine (`جنيه`) | Feminine (`ليرة`) |
+|---|---|---|---|
+| 1 | noun + agreeing adjective | `جنيه مصري واحد` | `ليرة تركية واحدة` |
+| 2 | the **dual noun** (no number word) | `جنيهان مصريان` | `ليرتان تركيتان` |
+| 3–10 | number **opposes** gender + plural noun | `ثلاثة جنيهات` | `ثلاث ليرات` |
+| 11–99 | number + singular noun | `أحد عشر جنيه` | `إحدى عشرة ليرة` |
+| 100/1000+ | scale word + singular noun | `مائة جنيه`، `ألف جنيه` | `مائة ليرة` |
+
+The noun form follows the number that **directly governs** it, so
+`103 → مائة وثلاثة جنيهات` (plural) and `120 → مائة وعشرون جنيه` (singular).
+Duals are nominative (`اثنان`، `مائتان`، `ألفان`) and drop their nūn when مضاف
+to the counted noun (`مائتا جنيه`، `ألفا جنيه`، `مليونا جنيه`). No-currency mode
+renders the bare number in the masculine.
+
+```ts
+new Tafgeet('3', 'EGP').parse();   // → 'ثلاثة جنيهات مصرية فقط لا غير'  (masc)
+new Tafgeet('3', 'TRY').parse();   // → 'ثلاث ليرات تركية فقط لا غير'    (fem)
+new Tafgeet('2', 'EGP').parse();   // → 'جنيهان مصريان فقط لا غير'        (dual)
+```
+
+> A native-speaker review settled these forms. If you spot a regional or
+> stylistic preference that differs, please [open an issue](https://github.com/omar-ehab/tafgeet-arabic/issues/new).
 
 ## Common pitfalls
 
@@ -323,7 +354,9 @@ Missing a currency? [Open an issue](https://github.com/omar-ehab/tafgeet-arabic/
 
 See [CHANGELOG.md](./CHANGELOG.md).
 
-**v1.3.0** (latest) — 14 new bundled currencies bring the total to 24: 10 Arab-region (BHD, OMR, JOD, IQD, LYD, LBP, MAD, DZD, SYP, YER) and 4 major international (EUR, GBP, CHF, CAD) for cross-border invoicing. No new APIs, no breaking changes.
+**v1.4.0** (latest) — a native-speaker grammar pass. Output is now grammatically correct فصحى with full gender agreement (e.g. `ثلاث ليرات` for the feminine lira, `ثلاثة جنيهات` for the masculine pound), correct dual/singular/plural noun selection, and the classical forms for 1 (`جنيه مصري واحد`) and 2 (`جنيهان مصريان`). Spelling fixes (`اثنان`، `اثنا عشر`، `آلاف`، `إماراتي`). This deliberately changes output for many inputs — see the CHANGELOG. No new options; gender is derived from the currency.
+
+**v1.3.0** — 14 new bundled currencies bring the total to 24: 10 Arab-region (BHD, OMR, JOD, IQD, LYD, LBP, MAD, DZD, SYP, YER) and 4 major international (EUR, GBP, CHF, CAD) for cross-border invoicing. No new APIs, no breaking changes.
 
 **v1.2.1** — eight correctness and hardening fixes found across two audit passes. Most notably: `'1.5' EGP` now correctly renders 50 piasters (not 5); `Number.MAX_VALUE` and other exponential-notation numbers now throw instead of silently corrupting; rounding can now carry from `0.999` up to `1`; strict options validation catches typos. See the v1.2.1 entry in the CHANGELOG for the full list. No new APIs.
 
@@ -333,7 +366,8 @@ See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Roadmap
 
-- **v1.4:** native-speaker grammar review of the Arabic dictionaries (including the v1.3 currency strings); grammar options (`feminine`, `accusative`); style modes — all pending native review
+- Optional **diacritized / accusative** output mode (tashkīl + case endings, e.g. `جنيهًا`) — v1.4 ships undiacritized by design
+- Optional **legal mode** for unambiguous cheque/contract wording
 - Optional: functional API `tafgeet(amount, currency?)` alongside the class
 
 ## Contributing
@@ -344,7 +378,7 @@ PRs and issues welcome. To set up locally:
 git clone https://github.com/omar-ehab/tafgeet-arabic
 cd tafgeet-arabic
 npm install
-npm test               # 885 tests (578 snapshot + 307 unit/feature/regression)
+npm test               # 1064 tests (726 snapshot + 338 unit/feature/regression)
 npm run lint           # ESLint
 npm run test:js-compat # CJS + ESM smoke tests against built dist/
 ```

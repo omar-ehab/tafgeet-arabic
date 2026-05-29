@@ -60,7 +60,7 @@ describe('CurrencyCode + SUPPORTED_CURRENCIES (1.2.0)', () => {
     it('accepts a CurrencyCode-typed variable', () => {
       const code: CurrencyCode = 'EGP';
       const text = new Tafgeet('1', code).parse();
-      assert.equal(text, 'واحد جنيه مصري فقط لا غير');
+      assert.equal(text, 'جنيه مصري واحد فقط لا غير');
     });
 
     it('accepts an arbitrary string at the type level (forward compat)', () => {
@@ -70,7 +70,7 @@ describe('CurrencyCode + SUPPORTED_CURRENCIES (1.2.0)', () => {
       // system can't know about.
       const code: string = 'EGP';
       const text = new Tafgeet('1', code).parse();
-      assert.equal(text, 'واحد جنيه مصري فقط لا غير');
+      assert.equal(text, 'جنيه مصري واحد فقط لا غير');
     });
 
     it('runtime still rejects unknown codes', () => {
@@ -82,7 +82,7 @@ describe('CurrencyCode + SUPPORTED_CURRENCIES (1.2.0)', () => {
 
   describe('Backward compatibility', () => {
     it('plain string literal still works as before', () => {
-      assert.equal(new Tafgeet('1', 'EGP').parse(), 'واحد جنيه مصري فقط لا غير');
+      assert.equal(new Tafgeet('1', 'EGP').parse(), 'جنيه مصري واحد فقط لا غير');
     });
 
     it('empty string (no-currency mode) still works as before', () => {
@@ -90,7 +90,7 @@ describe('CurrencyCode + SUPPORTED_CURRENCIES (1.2.0)', () => {
     });
 
     it('default EGP still applies when currency omitted', () => {
-      assert.equal(new Tafgeet('1').parse(), 'واحد جنيه مصري فقط لا غير');
+      assert.equal(new Tafgeet('1').parse(), 'جنيه مصري واحد فقط لا غير');
     });
   });
 });

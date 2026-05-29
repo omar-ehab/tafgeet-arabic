@@ -4,8 +4,10 @@
  */
 
 /**
- * Lexical forms for an Arabic counted noun: singular (1), dual (2),
- * broken plural (3–9). Example for ألف / ألفين / ألآف.
+ * Lexical forms for an Arabic scale word: singular (1), dual (2),
+ * broken plural (3–9). Example for ألف / ألفان / آلاف. `binary` is the
+ * nominative dual (ألفان); the renderer drops the final nūn when the dual
+ * is مضاف (immediately followed by its counted noun): ألفا جنيه.
  */
 export interface NumberProperties {
   singular: string;
@@ -13,16 +15,29 @@ export interface NumberProperties {
   plural: string;
 }
 
+/** Grammatical gender of a counted noun — drives number agreement. */
+export type Gender = 'm' | 'f';
+
 /**
- * Arabic forms + decimal precision for a single currency. The main and
- * fractional units each have singular (count 1/2/11+) and plural (3–10)
- * variants per Arabic grammar.
+ * Arabic forms + decimal precision for a single currency.
+ *
+ * Both the main unit and the fractional unit carry the four counted-noun
+ * forms Arabic grammar needs plus their intrinsic gender:
+ *   - `singular`  — count 1 / 11+ / round 100·1000 (e.g. جنيه)
+ *   - `dual`      — count 2, the dual noun incl. its adjective (e.g. جنيهان مصريان)
+ *   - `plural`    — counts 3–10 (e.g. جنيهات مصرية)
+ *   - `gender`    — fixed gender of the unit; the number 3–10 takes the
+ *                   opposite form, 1/2 agree. `جنيه` is `'m'`, `ليرة` is `'f'`.
  */
 export interface Currency {
   singular: string;
+  dual: string;
   plural: string;
+  gender: Gender;
   fraction: string;
+  fractionDual: string;
   fractions: string;
+  fractionGender: Gender;
   decimals: number;
 }
 

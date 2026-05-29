@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] – 2026-05-29
+
+A native-speaker Arabic-grammar pass. The default output is now grammatically
+correct Modern Standard Arabic (فصحى), undiacritized (no tashkīl), with full
+gender agreement and correct counted-noun forms.
+
+**This release deliberately changes output for many inputs.** Per the project's
+established stance, fixing grammatically wrong Arabic is not treated as a
+breaking change — but if you pinned exact output strings in your own tests,
+they will need updating. The public API is unchanged: no new methods, no new
+options. Gender is derived from each built-in currency, never configured.
+
+### Changed (output)
+
+- **Gender agreement (العدد والمعدود).** The number now agrees with the noun it
+  counts. For 3–10 it takes the opposite gender; feminine currencies and
+  fractional units get the correct forms:
+  - `ثلاث ليرات تركية` (was `ثلاثة ليرات…`) — feminine `ليرة`.
+  - `ثلاث هللات` / `خمس بيسات` — feminine fraction units `هللة` / `بيسة`.
+  - feminine teens too: `إحدى عشرة ليرة`, `ثلاث عشرة ليرة`.
+- **1 and 2 use the classical forms.**
+  - `1 → noun + واحد/واحدة`: `جنيه مصري واحد`, `ليرة تركية واحدة` (was `واحد جنيه مصري`).
+  - `2 → the dual noun`: `جنيهان مصريان`, `ليرتان تركيتان` (was `ٱثنين جنيه مصري`).
+- **Noun form now follows the governing number**, fixing compound amounts:
+  - `103 → مائة وثلاثة جنيهات` (plural), `1,000,003 → مليون وثلاثة جنيهات`.
+  - fraction `0.205 → …ومائتان وخمسة فلوس` (plural).
+- **Broken plural for 10 of a scale word**: `10,000 → عشرة آلاف` (was `عشرة ألف`),
+  `10,000,000 → عشرة ملايين`.
+- **Duals are nominative and drop the nūn when مضاف** to the counted noun:
+  `200 → مائتا جنيه`, `2,000 → ألفا جنيه`, `2,000,000 → مليونا جنيه`. Standalone
+  (no-currency) duals keep the nūn: `مائتان`, `ألفان`, `اثنان`.
+
+### Fixed (spelling)
+
+- `ٱثنين` → `اثنان` (was written with a waṣla alif).
+- `أثني عشر` → `اثنا عشر`.
+- `ألآف` → `آلاف`.
+- `درهم أماراتي` → `درهم إماراتي` (AED).
+- `ترليون` → `تريليون`.
+
+### Internal
+
+- Number dictionaries gained feminine variants (`ONES_F`, `TEENS_F`); each
+  currency now carries `gender`, `dual`, `fractionDual`, `fractionGender`.
+- Snapshot matrix expanded to exercise the masculine/feminine split
+  exhaustively (added a feminine currency sweep + feminine-fraction cases);
+  ~726 snapshot entries. New `test/grammar.spec.ts` pins the canonical forms.
+
+### Compatibility note for callers
+
+Output changes only reflect grammatical correctness — every change moves from
+wrong (or less correct) Arabic to correct Arabic. If you have tests asserting
+the old strings (e.g. `واحد جنيه مصري`, `عشرة ألف`, `ٱثنين`), update them.
+
 ## [1.3.0] – 2026-05-29
 
 A coverage release. 14 new bundled currencies bring the total to 24 —

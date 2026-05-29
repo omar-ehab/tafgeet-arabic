@@ -15,24 +15,24 @@ const { Tafgeet } = require('../dist/index.cjs');
 assert.equal(typeof Tafgeet, 'function', 'Tafgeet should be a constructor function');
 
 // --- Smoke: integer amounts ------------------------------------------------
-assert.equal(new Tafgeet('1').parse(), 'واحد جنيه مصري فقط لا غير', '1 EGP');
+assert.equal(new Tafgeet('1').parse(), 'جنيه مصري واحد فقط لا غير', '1 EGP');
 assert.equal(
   new Tafgeet('1234567').parse(),
-  'مليون ومائتين وأربعة وثلاثون ألف وخمسمائة وسبعة وستون جنيه مصري فقط لا غير',
+  'مليون ومائتان وأربعة وثلاثون ألف وخمسمائة وسبعة وستون جنيه مصري فقط لا غير',
   '1,234,567 EGP',
 );
 
 // --- Smoke: fractional amounts (issue #11 regression) --------------------
 assert.equal(
   new Tafgeet('1.05').parse(),
-  'واحد جنيه مصري وخمسة قروش فقط لا غير',
+  'جنيه مصري واحد وخمسة قروش فقط لا غير',
   '1.05 EGP — fraction in 3-10 should be plural',
 );
 
 // --- Smoke: explicit currency --------------------------------------------
 assert.equal(
   new Tafgeet('1.001', 'KWD').parse(),
-  'واحد دينار كويتي وواحد فلس فقط لا غير',
+  'دينار كويتي واحد وفلس واحد فقط لا غير',
   '1.001 KWD (3-decimal currency)',
 );
 
@@ -47,7 +47,7 @@ assert.equal(
 assert.equal(new Tafgeet(44).parse(), 'أربعة وأربعون جنيه مصري فقط لا غير', '44 EGP (number input)');
 
 // --- Smoke: a v1.3 currency is reachable through the published build ------
-assert.equal(new Tafgeet('1.50', 'EUR').parse(), 'واحد يورو وخمسون سنت فقط لا غير', '1.50 EUR (v1.3 currency)');
+assert.equal(new Tafgeet('1.50', 'EUR').parse(), 'يورو واحد وخمسون سنت فقط لا غير', '1.50 EUR (v1.3 currency)');
 
 // --- Smoke: input validation throws cleanly for JS callers ---------------
 assert.throws(() => new Tafgeet(null), TypeError, 'null amount throws TypeError');
@@ -59,7 +59,7 @@ assert.throws(() => new Tafgeet(1, 'XYZ'), Error, 'unknown currency throws Error
 
 // --- Smoke: read() helper is publicly accessible -------------------------
 const t = new Tafgeet('1');
-assert.equal(t.read(42), 'ٱثنين وأربعون', 'read() helper renders 0-999');
+assert.equal(t.read(42), 'اثنان وأربعون', 'read() helper renders 0-999');
 
 console.log('✓ JS (CJS) compatibility smoke test: ALL PASSED');
 console.log("  Loaded via: require('../dist/index.cjs')");

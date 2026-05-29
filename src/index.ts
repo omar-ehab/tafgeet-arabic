@@ -1,12 +1,21 @@
-import { COLUMN_PROPERTIES, columns, currencies, HUNDREDS, ONES, TEENS, TENS } from './constants';
+import { COLUMN_PROPERTIES, columns, currencies, HUNDREDS, ONES, ONES_F, TEENS, TEENS_F, TENS } from './constants';
 import { AmountOutOfRangeError, InvalidAmountError, UnsupportedCurrencyError } from './errors';
-import { CurrencyInput, RoundingMode, TafgeetOptions } from './types';
+import { CurrencyInput, Gender, RoundingMode, TafgeetOptions } from './types';
+
+/** The four counted-noun forms + gender that drive Arabic number agreement. */
+interface CountedNoun {
+  singular: string;
+  dual: string;
+  plural: string;
+  gender: Gender;
+}
 
 export type {
   Currency,
   Currencies,
   CurrencyCode,
   CurrencyInput,
+  Gender,
   NumberProperties,
   RoundingMode,
   TafgeetOptions,
@@ -269,45 +278,29 @@ export class Tafgeet {
       throw new UnsupportedCurrencyError(`Tafgeet: unknown currency "${this.currency}"`);
     }
 
-    let str = '';
+    let str: string;
 
-    // 1–3 digit amounts have no thousands/millions/etc. column at all.
-    if (intStr.length <= 3) {
-      str += this.read(this.digit);
+    if (this.currency === '') {
+      // No-currency mode: bare number, masculine, with no following noun
+      // (so no إضافة — duals keep their nūn: مائتان, ألفان).
+      str = this.renderIntegerWords(this.digit, 'm', false);
     } else {
-      // Split into 3-digit groups, head-first (e.g. "1234567" -> [1, 234, 567]).
-      const startCol = this.getColumnIndex();
-      const headLen = intStr.length % 3 === 0 ? 3 : intStr.length % 3;
-      const groups: number[] = [parseInt(intStr.slice(0, headLen), 10)];
-      for (let i = headLen; i < intStr.length; i += 3) {
-        groups.push(parseInt(intStr.slice(i, i + 3), 10));
-      }
-
-      // groups[i] -> column (startCol + i). A trailing group past
-      // columns.length is the "ones" position (no suffix). Skipping
-      // zero groups makes trailing-zero cleanup implicit.
-      const rendered: string[] = [];
-      for (let i = 0; i < groups.length; i++) {
-        const value = groups[i] ?? 0;
-        if (value === 0) continue;
-        const colIdx = startCol + i;
-        if (colIdx >= columns.length) {
-          rendered.push(this.read(value));
-        } else {
-          rendered.push(this.addSuffixForGroup(value, colIdx));
-        }
-      }
-      str += rendered.join(' و');
-    }
-
-    if (this.currency !== '') {
       const cur = currencies[this.currency as keyof typeof currencies];
-      str += ' ' + (this.digit >= 3 && this.digit <= 10 ? cur.plural : cur.singular);
+      str = this.renderCountedNoun(this.digit, {
+        singular: cur.singular,
+        dual: cur.dual,
+        plural: cur.plural,
+        gender: cur.gender,
+      });
       if (this.fraction !== 0) {
-        // Arabic broken-plural rule: counts 3–10 take the plural form
-        // (قروش), everything else (1, 2, 11+) takes the singular (قرش).
-        const fracWord = this.fraction >= 3 && this.fraction <= 10 ? cur.fractions : cur.fraction;
-        str += ' و' + this.read(this.fraction) + ' ' + fracWord;
+        str +=
+          ' و' +
+          this.renderCountedNoun(this.fraction, {
+            singular: cur.fraction,
+            dual: cur.fractionDual,
+            plural: cur.fractions,
+            gender: cur.fractionGender,
+          });
       }
     }
 
@@ -316,9 +309,67 @@ export class Tafgeet {
   }
 
   /**
+   * Renders a number together with its counted noun, applying Arabic
+   * agreement: 1 → noun + واحد/واحدة, 2 → the dual noun, 3–10 → number +
+   * plural, everything else → number + singular. The number words for the
+   * group that directly governs the noun take the noun's gender.
+   */
+  private renderCountedNoun(value: number, noun: CountedNoun): string {
+    if (value === 1) return `${noun.singular} ${noun.gender === 'f' ? 'واحدة' : 'واحد'}`;
+    if (value === 2) return noun.dual;
+    const words = this.renderIntegerWords(value, noun.gender, true);
+    const tail = value % 100;
+    const form = tail >= 3 && tail <= 10 ? noun.plural : noun.singular;
+    return `${words} ${form}`;
+  }
+
+  /**
+   * Renders the number words for an integer ≥ 1 (no counted noun). `gender`
+   * applies only to the lowest group — the one that directly governs the
+   * counted noun; scale-multiplier groups are always masculine. `idafaToNoun`
+   * is true when a counted noun immediately follows (currency mode), which
+   * makes the final dual drop its nūn (ألفا جنيه, مائتا جنيه).
+   */
+  private renderIntegerWords(n: number, gender: Gender, idafaToNoun: boolean): string {
+    const intStr = n.toString();
+    if (intStr.length <= 3) {
+      return this.readNumber(n, gender, idafaToNoun);
+    }
+    // Split into 3-digit groups, head-first (e.g. "1234567" -> [1, 234, 567]).
+    const startCol = Tafgeet.columnIndexForLength(intStr.length);
+    const headLen = intStr.length % 3 === 0 ? 3 : intStr.length % 3;
+    const groups: number[] = [parseInt(intStr.slice(0, headLen), 10)];
+    for (let i = headLen; i < intStr.length; i += 3) {
+      groups.push(parseInt(intStr.slice(i, i + 3), 10));
+    }
+
+    let lastIdx = -1;
+    for (let i = 0; i < groups.length; i++) {
+      if ((groups[i] ?? 0) !== 0) lastIdx = i;
+    }
+
+    // groups[i] -> column (startCol + i). A trailing group past columns.length
+    // is the "ones" position (no suffix) and directly governs the noun, so it
+    // takes `gender`. Zero groups are skipped (implicit trailing-zero cleanup).
+    const rendered: string[] = [];
+    for (let i = 0; i < groups.length; i++) {
+      const value = groups[i] ?? 0;
+      if (value === 0) continue;
+      const colIdx = startCol + i;
+      const isLast = i === lastIdx;
+      if (colIdx >= columns.length) {
+        rendered.push(this.readNumber(value, gender, idafaToNoun && isLast));
+      } else {
+        rendered.push(this.addSuffixForGroup(value, colIdx, idafaToNoun && isLast));
+      }
+    }
+    return rendered.join(' و');
+  }
+
+  /**
    * Renders a value 0–999 as Arabic words (without any column/currency suffix).
    * Exposed publicly for use as a low-level helper; for whole amounts, use
-   * `parse()` instead.
+   * `parse()` instead. Always uses the masculine forms.
    *
    * `0` returns `''` (no Arabic word for zero in this dictionary).
    *
@@ -332,20 +383,22 @@ export class Tafgeet {
     if (d < 0 || d > 999) {
       throw new AmountOutOfRangeError(`Tafgeet.read: argument must be in 0..999, got ${d}`);
     }
-    if (d === 0) return '';
-    if (d < 10) return this.readOnes(d);
-    if (d < 100) return this.readTens(d);
-    return this.readHundreds(d);
+    return this.readNumber(d, 'm', false);
   }
 
-  // Maps digit-count of the integer part -> starting column index.
-  //   1–3 digits:  hundreds-only (handled separately in parse(); returns 0).
-  //   4–6 digits:  thousands  (column 3)
-  //   7–9 digits:  millions   (column 2)
-  //   10–12 digits: billions  (column 1)
-  //   13–15 digits: trillions (column 0)
-  private getColumnIndex(): number {
-    const len = this.digit.toString().length;
+  // Renders 0–999 with gender. Private: trusts a validated 0..999 input.
+  // `idafa` only affects an exact 200 (مائتان -> مائتا when مضاف).
+  private readNumber(d: number, gender: Gender, idafa: boolean): string {
+    if (d === 0) return '';
+    if (d < 10) return this.readOnes(d, gender);
+    if (d < 100) return this.readTens(d, gender);
+    return this.readHundreds(d, gender, idafa);
+  }
+
+  // Maps digit-count of an integer part -> starting column index.
+  //   1–3 digits:  no column (handled by renderIntegerWords directly)
+  //   4–6:  thousands (3), 7–9: millions (2), 10–12: billions (1), 13–15: trillions (0)
+  private static columnIndexForLength(len: number): number {
     if (len <= 3) return 0;
     if (len <= 6) return 3;
     if (len <= 9) return 2;
@@ -353,53 +406,64 @@ export class Tafgeet {
     return 0;
   }
 
-  private readOnes(d: number): string {
-    if (d === 0) return '';
-    return ONES[d] ?? '';
+  // Nominative dual ...ان loses its nūn when مضاف: مائتان→مائتا, ألفان→ألفا.
+  private static dropDualNun(dual: string): string {
+    return dual.endsWith('ان') ? dual.slice(0, -1) : dual;
   }
 
-  private readTens(d: number): string {
+  private readOnes(d: number, gender: Gender): string {
+    if (d === 0) return '';
+    const dict = gender === 'f' ? ONES_F : ONES;
+    return dict[d] ?? '';
+  }
+
+  private readTens(d: number, gender: Gender): string {
+    if (d === 10) return gender === 'f' ? 'عشر' : 'عشرة';
     const onesDigit = d % 10;
     const tensDigit = Math.floor(d / 10);
     if (onesDigit === 0) return TENS[d] ?? '';
-    if (d > 10 && d < 20) return TEENS[d] ?? '';
+    if (d > 10 && d < 20) {
+      const dict = gender === 'f' ? TEENS_F : TEENS;
+      return dict[d] ?? '';
+    }
     if (d > 19 && d < 100) {
-      return (ONES[onesDigit] ?? '') + ' و' + (TENS[tensDigit * 10] ?? '');
+      return this.readOnes(onesDigit, gender) + ' و' + (TENS[tensDigit * 10] ?? '');
     }
     return '';
   }
 
-  private readHundreds(d: number): string {
+  private readHundreds(d: number, gender: Gender, idafa: boolean): string {
     const hundredsDigit = Math.floor(d / 100);
     const lastTwo = d % 100;
-    const tensDigit = Math.floor(lastTwo / 10);
-    const onesDigit = lastTwo % 10;
 
-    let str = HUNDREDS[hundredsDigit * 100] ?? '';
-    if (tensDigit === 0 && onesDigit !== 0) {
-      str += ' و' + (ONES[onesDigit] ?? '');
-    } else if (tensDigit !== 0) {
-      str += ' و' + this.readTens(lastTwo);
+    let head = HUNDREDS[hundredsDigit * 100] ?? '';
+    // مائتان is the final word (so مضاف to the noun) only when the value is
+    // exactly 200; in 2xx it is followed by the tens/ones and keeps its nūn.
+    if (d === 200 && idafa) head = Tafgeet.dropDualNun(head);
+
+    if (lastTwo === 0) return head;
+    if (Math.floor(lastTwo / 10) === 0) {
+      return head + ' و' + this.readOnes(lastTwo, gender);
     }
-    return str;
+    return head + ' و' + this.readTens(lastTwo, gender);
   }
 
   /**
    * Renders a single 1–999 group followed by its column suffix
-   * (ألف / مليون / مليار / ترليون), applying Arabic singular / dual /
-   * plural rules for the count:
+   * (ألف / مليون / مليار / تريليون), applying Arabic count rules. The
+   * multiplier is always masculine (scale words are masculine):
    *   1     -> singular (ألف)
-   *   2     -> dual     (ألفين)
-   *   3–9   -> count + plural (ثلاثة ألآف)
-   *   10+   -> rendered + singular (عشرة ألف)
+   *   2     -> dual (ألفان; ألفا when مضاف to a following counted noun)
+   *   3–10  -> count + plural (ثلاثة آلاف, عشرة آلاف)
+   *   11+   -> count + singular (مائة ألف); the count is مضاف to the scale word.
    */
-  private addSuffixForGroup(value: number, columnIdx: number): string {
+  private addSuffixForGroup(value: number, columnIdx: number, idafaToNoun: boolean): string {
     const colName = columns[columnIdx];
     const props = colName ? COLUMN_PROPERTIES[colName] : undefined;
-    if (!props) return this.read(value);
+    if (!props) return this.readNumber(value, 'm', false);
     if (value === 1) return props.singular;
-    if (value === 2) return props.binary;
-    if (value >= 3 && value <= 9) return `${ONES[value] ?? ''} ${props.plural}`;
-    return `${this.read(value)} ${props.singular}`;
+    if (value === 2) return idafaToNoun ? Tafgeet.dropDualNun(props.binary) : props.binary;
+    if (value >= 3 && value <= 10) return `${this.readNumber(value, 'm', false)} ${props.plural}`;
+    return `${this.readNumber(value, 'm', true)} ${props.singular}`;
   }
 }

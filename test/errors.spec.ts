@@ -208,7 +208,7 @@ describe('Custom error classes (1.2.0)', () => {
     it('1234.56 still works (normal case unaffected)', () => {
       assert.equal(
         new Tafgeet(1234.56, 'EGP').parse(),
-        'ألف ومائتين وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير',
+        'ألف ومائتان وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير',
       );
     });
   });

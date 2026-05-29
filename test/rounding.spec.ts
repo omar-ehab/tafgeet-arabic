@@ -125,17 +125,17 @@ describe('Rounding option (1.2.0)', () => {
     // moving the integer-range check to AFTER parseFraction returns.
 
     it("'0.999' EGP + round -> 1 EGP", () => {
-      assert.equal(new Tafgeet('0.999', 'EGP', { rounding: 'round' }).parse(), 'واحد جنيه مصري فقط لا غير');
+      assert.equal(new Tafgeet('0.999', 'EGP', { rounding: 'round' }).parse(), 'جنيه مصري واحد فقط لا غير');
     });
     it("'0.999' EGP + ceil -> 1 EGP", () => {
-      assert.equal(new Tafgeet('0.999', 'EGP', { rounding: 'ceil' }).parse(), 'واحد جنيه مصري فقط لا غير');
+      assert.equal(new Tafgeet('0.999', 'EGP', { rounding: 'ceil' }).parse(), 'جنيه مصري واحد فقط لا غير');
     });
     it("'0.999' EGP + bankers -> 1 EGP (drop=9 > 5 -> carry, not the exactly-half case)", () => {
-      assert.equal(new Tafgeet('0.999', 'EGP', { rounding: 'bankers' }).parse(), 'واحد جنيه مصري فقط لا غير');
+      assert.equal(new Tafgeet('0.999', 'EGP', { rounding: 'bankers' }).parse(), 'جنيه مصري واحد فقط لا غير');
     });
     it("'0.991' EGP + ceil -> 1 EGP (fraction carry from ceil)", () => {
       // ceil sees drop='1' → carry, fracValue 99+1=100, overflow → intCarry=1
-      assert.equal(new Tafgeet('0.991', 'EGP', { rounding: 'ceil' }).parse(), 'واحد جنيه مصري فقط لا غير');
+      assert.equal(new Tafgeet('0.991', 'EGP', { rounding: 'ceil' }).parse(), 'جنيه مصري واحد فقط لا غير');
     });
     it("'0.001' EGP + ceil -> still throws (rounds to 0.01, not 1.00)", () => {
       // Sanity: ceil rounds the FRACTION up (to 1 piaster), it doesn't
@@ -158,7 +158,7 @@ describe('Rounding option (1.2.0)', () => {
       );
     });
     it("'0.9999' TND + round -> 1 TND (4-digit fraction on 3-decimal -> rounds, carries)", () => {
-      assert.equal(new Tafgeet('0.9999', 'TND', { rounding: 'round' }).parse(), 'واحد دينار تونسي فقط لا غير');
+      assert.equal(new Tafgeet('0.9999', 'TND', { rounding: 'round' }).parse(), 'دينار تونسي واحد فقط لا غير');
     });
 
     // Cases that should STILL throw — verify the fix didn't accidentally
