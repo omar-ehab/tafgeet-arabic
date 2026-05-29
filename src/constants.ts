@@ -111,9 +111,6 @@ export const currencies: Currencies = {
     fractionGender: 'm',
     decimals: 2,
   },
-  // v1.3 additions — Arab region. Insertion order is intentional: the
-  // UnsupportedCurrencyError message lists Object.keys(currencies), so new
-  // codes must append after the original 10 to keep existing assertions valid.
   BHD: {
     singular: 'دينار بحريني',
     dual: 'ديناران بحرينيان',
@@ -224,9 +221,6 @@ export const currencies: Currencies = {
     fractionGender: 'm',
     decimals: 2,
   },
-  // v1.3 additions — major international (for cross-border invoicing).
-  // EUR: يورو is an indeclinable foreign noun — singular/plural/idafa all يورو
-  // (e.g. ثلاثة يورو); only the dual يوروان inflects.
   EUR: {
     singular: 'يورو',
     dual: 'يوروان',
@@ -275,10 +269,6 @@ export const currencies: Currencies = {
 
 export const columns: readonly string[] = ['trillions', 'billions', 'millions', 'thousands'];
 
-/**
- * Runtime list of built-in currency codes — frozen, iterable, includes()-able.
- * Keep in sync with the `Currencies` interface and `currencies` map.
- */
 export const SUPPORTED_CURRENCIES: readonly CurrencyCode[] = Object.freeze([
   'AED',
   'AUD',
@@ -306,12 +296,6 @@ export const SUPPORTED_CURRENCIES: readonly CurrencyCode[] = Object.freeze([
   'YER',
 ]);
 
-// -- Number-word dictionaries -------------------------------------------------
-// Indexed by digit value (e.g. `ONES[5]`). Frozen + module-level so every
-// Tafgeet instance shares the same reference instead of re-allocating.
-
-// Masculine 1–9 (used with masculine nouns and as scale multipliers). Per the
-// gender-opposition rule, these "with-ة" forms count masculine nouns (ثلاثة جنيهات).
 export const ONES: Readonly<Record<number, string>> = Object.freeze({
   1: 'واحد',
   2: 'اثنان',
@@ -324,9 +308,6 @@ export const ONES: Readonly<Record<number, string>> = Object.freeze({
   9: 'تسعة',
 });
 
-// Feminine 1–9 (used with feminine nouns: ليرة, هللة, بيسة). 1/2 are the
-// compound forms (إحدى/اثنتان, as in إحدى وعشرون); the standalone-1 adjective
-// واحدة is appended directly by the renderer.
 export const ONES_F: Readonly<Record<number, string>> = Object.freeze({
   1: 'إحدى',
   2: 'اثنتان',
@@ -351,7 +332,6 @@ export const TEENS: Readonly<Record<number, string>> = Object.freeze({
   19: 'تسعة عشر',
 });
 
-// Feminine 11–19 (both the unit and the عشرة part inflect for gender).
 export const TEENS_F: Readonly<Record<number, string>> = Object.freeze({
   11: 'إحدى عشرة',
   12: 'اثنتا عشرة',
@@ -364,8 +344,6 @@ export const TEENS_F: Readonly<Record<number, string>> = Object.freeze({
   19: 'تسع عشرة',
 });
 
-// 20–90 are gender-invariable. 10 is gendered (عشرة masc / عشر fem) and is
-// handled by the renderer, not stored here.
 export const TENS: Readonly<Record<number, string>> = Object.freeze({
   10: 'عشرة',
   20: 'عشرون',
@@ -378,9 +356,6 @@ export const TENS: Readonly<Record<number, string>> = Object.freeze({
   90: 'تسعون',
 });
 
-// 200 is the nominative dual مائتان; the renderer drops the nūn to مائتا when
-// it is مضاف (exactly 200 immediately before its counted noun). The 3–9×مائة
-// forms already use the correct feminine unit (ثلاثمائة), so they are invariable.
 export const HUNDREDS: Readonly<Record<number, string>> = Object.freeze({
   100: 'مائة',
   200: 'مائتان',
@@ -393,8 +368,6 @@ export const HUNDREDS: Readonly<Record<number, string>> = Object.freeze({
   900: 'تسعمائة',
 });
 
-// Scale words are masculine. `binary` is the nominative dual (ألفان); the
-// renderer drops the nūn (ألفا) when the dual is مضاف to a following noun.
 export const THOUSANDS: Readonly<NumberProperties> = Object.freeze({
   singular: 'ألف',
   binary: 'ألفان',
@@ -419,7 +392,6 @@ export const TRILLIONS: Readonly<NumberProperties> = Object.freeze({
   plural: 'تريليونات',
 });
 
-// Column name -> NumberProperties, used by parse() to pick the suffix word.
 export const COLUMN_PROPERTIES: Readonly<Record<string, Readonly<NumberProperties>>> = Object.freeze({
   trillions: TRILLIONS,
   billions: BILLIONS,

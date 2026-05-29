@@ -1,17 +1,9 @@
 /**
- * The Arabic number→words rendering engine.
- *
- * These are pure functions — given a number (and, where it matters, the
- * gender of the noun being counted and whether that noun immediately
- * follows), they produce the Arabic words. They hold no state, so they live
- * here rather than on the `Tafgeet` class, which owns input parsing and the
- * public API.
- *
- * Grammar encoded here:
- *   - gender agreement for the counted noun (3–10 oppose, 1/2 agree)
- *   - singular / dual / plural noun selection by the governing number
- *   - nominative duals (اثنان، مائتان، ألفان) that drop their nūn when مضاف
- *     to the following counted noun (مائتا جنيه، ألفا جنيه)
+ * The Arabic number→words rendering engine — pure, stateless functions that
+ * live here rather than on the `Tafgeet` class (which owns input parsing and
+ * the public API). They encode the grammar: gender agreement (3–10 oppose the
+ * noun, 1/2 agree), singular/dual/plural selection by the governing number,
+ * and the nominative dual that drops its nūn when مضاف (مائتا جنيه، ألفا جنيه).
  */
 
 import { COLUMN_PROPERTIES, columns, HUNDREDS, ONES, ONES_F, TEENS, TEENS_F, TENS } from './constants';

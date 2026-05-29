@@ -40,9 +40,7 @@ export class Tafgeet {
     // validateInput guarantees trimmedCurrency is now a string.
     this.currency = trimmedCurrency as string;
     this.splitted = normalized.split('.');
-    // No-currency mode silently dropped fractional input pre-1.2.1.
-    // Now: reject up front (the user clearly intended fractional rendering
-    // but no-currency mode has no fraction word to render with).
+    // No-currency mode has no fraction word to render, so reject fractions.
     if (this.currency === '' && /[1-9]/.test(this.splitted[1] ?? '')) {
       throw new InvalidAmountError(
         `Tafgeet: no-currency mode does not accept fractional amounts (no fraction word to render), got "${normalized}". Pass an integer amount, or specify a currency.`,
@@ -186,10 +184,8 @@ export class Tafgeet {
       }
       normalized = digit.toString();
       // Numbers >= 1e21 or < 1e-6 stringify in scientific notation
-      // (e.g. "1e+21", "1.79e+308", "5e-324"). Pre-1.2.1 these slipped
-      // past validation and parseFraction silently corrupted the output
-      // (Number.MAX_VALUE rendered as "1.79 EGP"). Reject them here and
-      // tell the caller how to recover.
+      // (e.g. "1e+21", "5e-324"), which parseInt would corrupt — reject them
+      // and tell the caller to pass a string instead.
       if (!/^\d+(\.\d+)?$/.test(normalized)) {
         throw new AmountOutOfRangeError(
           `Tafgeet: number ${digit} is outside the representable decimal range ` +
@@ -247,17 +243,11 @@ export class Tafgeet {
   /**
    * Renders the amount as Arabic words, including the currency suffix
    * and the closing فقط لا غير.
-   *
-   * @throws {AmountOutOfRangeError} if the integer part is 16+ digits.
-   *   Unreachable from normal API use — the constructor catches this
-   *   earlier — but kept as a safety net against reflection-based misuse.
    */
   parse(): string {
     const intStr = this.digit.toString();
-    // Re-validate the internal state — guards against post-construction
-    // mutation (private fields are TS-only, accessible at runtime via
-    // reflection). The constructor already validates these, so these only
-    // fire if someone mutated state between construction and parse.
+    // Defense in depth: re-validate state in case the (runtime-accessible)
+    // private fields were mutated by reflection after construction.
     if (!Number.isInteger(this.digit) || this.digit < 1) {
       throw new AmountOutOfRangeError(`Tafgeet: integer part must be >= 1, got ${this.digit}`);
     }

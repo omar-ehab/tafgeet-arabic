@@ -52,6 +52,9 @@ options. Gender is derived from each built-in currency, never configured.
 - Snapshot matrix expanded to exercise the masculine/feminine split
   exhaustively (added a feminine currency sweep + feminine-fraction cases);
   ~726 snapshot entries. New `test/grammar.spec.ts` pins the canonical forms.
+- Extracted the pure number→words engine into `src/render.ts`; the `Tafgeet`
+  class now owns only input parsing/validation and the public API.
+- Removed the stale `tslint.json` (unused since the v1.1 move to ESLint 9).
 
 ### Compatibility note for callers
 
