@@ -7,15 +7,7 @@
  */
 
 import { COLUMN_PROPERTIES, columns, HUNDREDS, ONES, ONES_F, TEENS, TEENS_F, TENS } from './constants';
-import { Gender } from './types';
-
-/** The four counted-noun forms + gender that drive Arabic number agreement. */
-export interface CountedNoun {
-  singular: string;
-  dual: string;
-  plural: string;
-  gender: Gender;
-}
+import { CountedNoun, Gender } from './types';
 
 // Nominative dual ...ان loses its nūn when مضاف: مائتان→مائتا, ألفان→ألفا.
 function dropDualNun(dual: string): string {

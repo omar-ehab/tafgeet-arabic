@@ -1,6 +1,6 @@
 /**
- * Public type definitions for the tafgeet-arabic package.
- * All types here are re-exported from the package root.
+ * Type definitions for the tafgeet-arabic package. Most are re-exported from
+ * the package root; `CountedNoun` is an internal helper used by the renderer.
  */
 
 /**
@@ -9,11 +9,11 @@
  * nominative dual (ألفان); the renderer drops the final nūn when the dual
  * is مضاف (immediately followed by its counted noun): ألفا جنيه.
  */
-export interface NumberProperties {
+export type NumberProperties = {
   singular: string;
   binary: string;
   plural: string;
-}
+};
 
 /** Grammatical gender of a counted noun — drives number agreement. */
 export type Gender = 'm' | 'f';
@@ -29,7 +29,7 @@ export type Gender = 'm' | 'f';
  *   - `gender`    — fixed gender of the unit; the number 3–10 takes the
  *                   opposite form, 1/2 agree. `جنيه` is `'m'`, `ليرة` is `'f'`.
  */
-export interface Currency {
+export type Currency = {
   singular: string;
   dual: string;
   plural: string;
@@ -39,12 +39,18 @@ export interface Currency {
   fractions: string;
   fractionGender: Gender;
   decimals: number;
-}
+};
 
-/**
- * Map of supported ISO currency codes to their Arabic Currency definitions.
- */
-export interface Currencies {
+/** The four counted-noun forms + gender that drive Arabic number agreement. */
+export type CountedNoun = {
+  singular: string;
+  dual: string;
+  plural: string;
+  gender: Gender;
+};
+
+/** Map of supported ISO currency codes to their Arabic Currency definitions. */
+export type Currencies = {
   SDG: Currency;
   SAR: Currency;
   QAR: Currency;
@@ -69,7 +75,7 @@ export interface Currencies {
   GBP: Currency;
   CHF: Currency;
   CAD: Currency;
-}
+};
 
 /**
  * Union of all built-in currency codes (`'EGP' | 'SAR' | …`). Derived
@@ -104,7 +110,7 @@ export type RoundingMode = 'truncate' | 'round' | 'floor' | 'ceil' | 'bankers';
  * (see {@link Currency.gender}) and derived automatically. A diacritized /
  * accusative output mode may be added in the future.
  */
-export interface TafgeetOptions {
+export type TafgeetOptions = {
   /** See {@link RoundingMode}. Defaults to `'truncate'`. */
   rounding?: RoundingMode;
-}
+};
