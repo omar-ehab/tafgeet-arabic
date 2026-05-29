@@ -1,35 +1,66 @@
 /**
- * Public type definitions for the tafgeet-arabic package.
- * All types here are re-exported from the package root.
+ * Type definitions for the tafgeet-arabic package.
+ *
+ * The re-exported public types are `NumberProperties`, `Currency`,
+ * `Currencies`, `CurrencyCode`, `CurrencyInput`, `RoundingMode`, and
+ * `TafgeetOptions`. `Gender`, `CurrencyEntry`, and `CountedNoun` are internal
+ * helpers used by the renderer and the currency data — not part of the public
+ * API.
  */
 
 /**
- * Lexical forms for an Arabic counted noun: singular (1), dual (2),
- * broken plural (3–9). Example for ألف / ألفين / ألآف.
+ * Lexical forms for an Arabic scale word: singular (1), dual (2),
+ * broken plural (3–10). Example for ألف / ألفان / آلاف. `binary` is the
+ * nominative dual (ألفان); the renderer drops the final nūn when the dual
+ * is مضاف (immediately followed by its counted noun): ألفا جنيه.
  */
-export interface NumberProperties {
+export type NumberProperties = {
   singular: string;
   binary: string;
   plural: string;
-}
+};
+
+/** Grammatical gender of a counted noun — drives number agreement (internal). */
+export type Gender = 'm' | 'f';
 
 /**
- * Arabic forms + decimal precision for a single currency. The main and
- * fractional units each have singular (count 1/2/11+) and plural (3–10)
- * variants per Arabic grammar.
+ * Public Arabic forms + decimal precision for a single currency.
+ *   - `singular`  — count 1 / 11+ / round 100·1000 (e.g. جنيه مصري)
+ *   - `plural`    — counts 3–10 (e.g. جنيهات مصرية)
+ *   - `fraction` / `fractions` — the fractional unit, singular / plural
+ *   - `decimals`  — fractional precision (2 or 3)
  */
-export interface Currency {
+export type Currency = {
   singular: string;
   plural: string;
   fraction: string;
   fractions: string;
   decimals: number;
-}
+};
 
 /**
- * Map of supported ISO currency codes to their Arabic Currency definitions.
+ * Internal currency record. Extends the public {@link Currency} with the dual
+ * forms and the intrinsic gender of each unit (the renderer needs these for
+ * agreement). Kept off the public API so adding it was not a breaking change
+ * to the exported `Currency` shape.
  */
-export interface Currencies {
+export type CurrencyEntry = Currency & {
+  dual: string;
+  gender: Gender;
+  fractionDual: string;
+  fractionGender: Gender;
+};
+
+/** The forms + gender the renderer needs to agree a number with its noun (internal). */
+export type CountedNoun = {
+  singular: string;
+  dual: string;
+  plural: string;
+  gender: Gender;
+};
+
+/** Map of supported ISO currency codes to their Arabic Currency definitions. */
+export type Currencies = {
   SDG: Currency;
   SAR: Currency;
   QAR: Currency;
@@ -54,7 +85,7 @@ export interface Currencies {
   GBP: Currency;
   CHF: Currency;
   CAD: Currency;
-}
+};
 
 /**
  * Union of all built-in currency codes (`'EGP' | 'SAR' | …`). Derived
@@ -83,10 +114,13 @@ export type CurrencyInput = CurrencyCode | '' | (string & {});
 export type RoundingMode = 'truncate' | 'round' | 'floor' | 'ceil' | 'bankers';
 
 /**
- * Optional third argument to the Tafgeet constructor. `precision`,
- * `feminine`, `accusative`, and `style` are planned for v1.3+.
+ * Optional third argument to the Tafgeet constructor.
+ *
+ * Gender is intentionally NOT an option — it is intrinsic to each currency
+ * (see {@link Currency.gender}) and derived automatically. A diacritized /
+ * accusative output mode may be added in the future.
  */
-export interface TafgeetOptions {
+export type TafgeetOptions = {
   /** See {@link RoundingMode}. Defaults to `'truncate'`. */
   rounding?: RoundingMode;
-}
+};

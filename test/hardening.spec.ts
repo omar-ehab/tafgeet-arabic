@@ -16,8 +16,8 @@ describe('read() input validation (v1.2.1 — Bug B)', () => {
     it('read(1) returns واحد', () => {
       assert.equal(t.read(1), 'واحد');
     });
-    it('read(42) returns ٱثنين وأربعون', () => {
-      assert.equal(t.read(42), 'ٱثنين وأربعون');
+    it('read(42) returns اثنان وأربعون', () => {
+      assert.equal(t.read(42), 'اثنان وأربعون');
     });
     it('read(100) returns مائة', () => {
       assert.equal(t.read(100), 'مائة');
@@ -120,7 +120,7 @@ describe('parse() validates internal state (v1.2.1 — Bug C)', () => {
     it('normal construction → valid parse()', () => {
       assert.equal(
         new Tafgeet('1234.56', 'EGP').parse(),
-        'ألف ومائتين وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير',
+        'ألف ومائتان وأربعة وثلاثون جنيه مصري وستة وخمسون قرش فقط لا غير',
       );
     });
   });
@@ -147,7 +147,7 @@ describe('parse() validates internal state (v1.2.1 — Bug C)', () => {
     it('mutated currency = SAR (valid) still works (only invalid state throws)', () => {
       const t = new Tafgeet('1', 'EGP');
       (t as unknown as { currency: string }).currency = 'SAR';
-      assert.equal(t.parse(), 'واحد ريال سعودي فقط لا غير');
+      assert.equal(t.parse(), 'ريال سعودي واحد فقط لا غير');
     });
     it('mutated currency = "" → no-currency mode still works', () => {
       const t = new Tafgeet('1', 'EGP');

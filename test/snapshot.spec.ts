@@ -97,22 +97,28 @@ const CANONICAL_INTEGERS = [
   '10',
   '11',
   '12',
+  '13',
   '20',
   '21',
+  '22',
+  '23',
   '99',
   '100',
   '101',
   '102',
+  '103',
   '111',
   '200',
   '500',
   '999',
   '1000',
   '1001',
+  '2000',
   '10000',
   '100000',
   '1000000',
   '1000001',
+  '1000003',
   '1100000',
   '10000000',
   '1000000000',
@@ -124,23 +130,27 @@ const CANONICAL_INTEGERS = [
 // 2-decimal: 01, 02, 03, 05, 10, 20, 50, 66, 99
 //   (covers 1/2 singular, 3-10 plural, 11+ singular, big-singular cases)
 // 3-decimal: 001, 002, 005, 010, 100, 500, 999
-const TWO_DECIMAL_FRACTIONS = ['01', '02', '03', '05', '10', '20', '50', '66', '99'];
-const THREE_DECIMAL_FRACTIONS = ['001', '002', '005', '010', '100', '500', '999'];
+const TWO_DECIMAL_FRACTIONS = ['01', '02', '03', '05', '10', '11', '20', '50', '66', '99'];
+const THREE_DECIMAL_FRACTIONS = ['001', '002', '005', '010', '011', '100', '205', '500', '999'];
 
 // Build the matrix.
 const cases: Array<{ amount: string; currency: string }> = [];
 
-// 1. EGP gets the full canonical sweep — it's the default currency,
-//    so we exhaustively cover every magnitude here.
-for (const amount of CANONICAL_INTEGERS) {
-  cases.push({ amount, currency: 'EGP' });
+// 1. Two currencies get the full canonical sweep: EGP (masculine, the default)
+//    and TRY (feminine ليرة) — so the masculine/feminine number agreement is
+//    exhaustively pinned across every magnitude.
+const EXHAUSTIVE_CURRENCIES = ['EGP', 'TRY'];
+for (const currency of EXHAUSTIVE_CURRENCIES) {
+  for (const amount of CANONICAL_INTEGERS) {
+    cases.push({ amount, currency });
+  }
 }
 
-// 2. Every other currency gets a representative subset
-//    (1, 2, 3, 100, 1000, 1100000 — covers singular/dual/plural/connector).
-const PER_CURRENCY_SUBSET = ['1', '2', '3', '100', '1000', '1100000'];
+// 2. Every other currency gets a representative subset covering
+//    singular / dual / plural / 11+ singular tamyīz / compound / connector.
+const PER_CURRENCY_SUBSET = ['1', '2', '3', '11', '21', '100', '1000', '1100000'];
 for (const currency of ALL_CURRENCIES) {
-  if (currency === 'EGP') continue; // already exhaustively covered above
+  if (EXHAUSTIVE_CURRENCIES.includes(currency)) continue; // already covered above
   for (const amount of PER_CURRENCY_SUBSET) {
     cases.push({ amount, currency });
   }
@@ -176,8 +186,20 @@ const REGRESSIONS: Array<{ amount: string; currency: string }> = [
   { amount: '1.005', currency: 'TND' },
   // KWD 1.010 case from PR #3 (originally it.skip'd)
   { amount: '1.010', currency: 'KWD' },
-  // No-currency mode
+  // No-currency mode — masculine, no إضافة so duals keep their nūn
+  // (اثنان، مائتان، ألفان) — distinct from the مضاف forms in currency mode.
   { amount: '7564654', currency: '' },
+  { amount: '2', currency: '' },
+  { amount: '12', currency: '' },
+  { amount: '13', currency: '' },
+  { amount: '22', currency: '' },
+  { amount: '200', currency: '' },
+  { amount: '2000', currency: '' },
+  // v1.4 grammar anchors — feminine fraction unit (هللة) and the
+  // last-component plural rule for fractions (205 → plural).
+  { amount: '1.02', currency: 'SAR' },
+  { amount: '1.03', currency: 'SAR' },
+  { amount: '1.205', currency: 'OMR' },
 ];
 cases.push(...REGRESSIONS);
 

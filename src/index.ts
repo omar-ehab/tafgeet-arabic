@@ -1,5 +1,6 @@
-import { COLUMN_PROPERTIES, columns, currencies, HUNDREDS, ONES, TEENS, TENS } from './constants';
+import { currencies } from './constants';
 import { AmountOutOfRangeError, InvalidAmountError, UnsupportedCurrencyError } from './errors';
+import { readNumber, renderCountedNoun, renderIntegerWords } from './render';
 import { CurrencyInput, RoundingMode, TafgeetOptions } from './types';
 
 export type {
@@ -38,9 +39,7 @@ export class Tafgeet {
     // validateInput guarantees trimmedCurrency is now a string.
     this.currency = trimmedCurrency as string;
     this.splitted = normalized.split('.');
-    // No-currency mode silently dropped fractional input pre-1.2.1.
-    // Now: reject up front (the user clearly intended fractional rendering
-    // but no-currency mode has no fraction word to render with).
+    // No-currency mode has no fraction word to render, so reject fractions.
     if (this.currency === '' && /[1-9]/.test(this.splitted[1] ?? '')) {
       throw new InvalidAmountError(
         `Tafgeet: no-currency mode does not accept fractional amounts (no fraction word to render), got "${normalized}". Pass an integer amount, or specify a currency.`,
@@ -184,10 +183,8 @@ export class Tafgeet {
       }
       normalized = digit.toString();
       // Numbers >= 1e21 or < 1e-6 stringify in scientific notation
-      // (e.g. "1e+21", "1.79e+308", "5e-324"). Pre-1.2.1 these slipped
-      // past validation and parseFraction silently corrupted the output
-      // (Number.MAX_VALUE rendered as "1.79 EGP"). Reject them here and
-      // tell the caller how to recover.
+      // (e.g. "1e+21", "5e-324"), which parseInt would corrupt — reject them
+      // and tell the caller to pass a string instead.
       if (!/^\d+(\.\d+)?$/.test(normalized)) {
         throw new AmountOutOfRangeError(
           `Tafgeet: number ${digit} is outside the representable decimal range ` +
@@ -245,17 +242,11 @@ export class Tafgeet {
   /**
    * Renders the amount as Arabic words, including the currency suffix
    * and the closing فقط لا غير.
-   *
-   * @throws {AmountOutOfRangeError} if the integer part is 16+ digits.
-   *   Unreachable from normal API use — the constructor catches this
-   *   earlier — but kept as a safety net against reflection-based misuse.
    */
   parse(): string {
     const intStr = this.digit.toString();
-    // Re-validate the internal state — guards against post-construction
-    // mutation (private fields are TS-only, accessible at runtime via
-    // reflection). The constructor already validates these, so these only
-    // fire if someone mutated state between construction and parse.
+    // Defense in depth: re-validate state in case the (runtime-accessible)
+    // private fields were mutated by reflection after construction.
     if (!Number.isInteger(this.digit) || this.digit < 1) {
       throw new AmountOutOfRangeError(`Tafgeet: integer part must be >= 1, got ${this.digit}`);
     }
@@ -269,45 +260,29 @@ export class Tafgeet {
       throw new UnsupportedCurrencyError(`Tafgeet: unknown currency "${this.currency}"`);
     }
 
-    let str = '';
+    let str: string;
 
-    // 1–3 digit amounts have no thousands/millions/etc. column at all.
-    if (intStr.length <= 3) {
-      str += this.read(this.digit);
+    if (this.currency === '') {
+      // No-currency mode: bare number, masculine, with no following noun
+      // (so no إضافة — duals keep their nūn: مائتان, ألفان).
+      str = renderIntegerWords(this.digit, 'm', false);
     } else {
-      // Split into 3-digit groups, head-first (e.g. "1234567" -> [1, 234, 567]).
-      const startCol = this.getColumnIndex();
-      const headLen = intStr.length % 3 === 0 ? 3 : intStr.length % 3;
-      const groups: number[] = [parseInt(intStr.slice(0, headLen), 10)];
-      for (let i = headLen; i < intStr.length; i += 3) {
-        groups.push(parseInt(intStr.slice(i, i + 3), 10));
-      }
-
-      // groups[i] -> column (startCol + i). A trailing group past
-      // columns.length is the "ones" position (no suffix). Skipping
-      // zero groups makes trailing-zero cleanup implicit.
-      const rendered: string[] = [];
-      for (let i = 0; i < groups.length; i++) {
-        const value = groups[i] ?? 0;
-        if (value === 0) continue;
-        const colIdx = startCol + i;
-        if (colIdx >= columns.length) {
-          rendered.push(this.read(value));
-        } else {
-          rendered.push(this.addSuffixForGroup(value, colIdx));
-        }
-      }
-      str += rendered.join(' و');
-    }
-
-    if (this.currency !== '') {
       const cur = currencies[this.currency as keyof typeof currencies];
-      str += ' ' + (this.digit >= 3 && this.digit <= 10 ? cur.plural : cur.singular);
+      str = renderCountedNoun(this.digit, {
+        singular: cur.singular,
+        dual: cur.dual,
+        plural: cur.plural,
+        gender: cur.gender,
+      });
       if (this.fraction !== 0) {
-        // Arabic broken-plural rule: counts 3–10 take the plural form
-        // (قروش), everything else (1, 2, 11+) takes the singular (قرش).
-        const fracWord = this.fraction >= 3 && this.fraction <= 10 ? cur.fractions : cur.fraction;
-        str += ' و' + this.read(this.fraction) + ' ' + fracWord;
+        str +=
+          ' و' +
+          renderCountedNoun(this.fraction, {
+            singular: cur.fraction,
+            dual: cur.fractionDual,
+            plural: cur.fractions,
+            gender: cur.fractionGender,
+          });
       }
     }
 
@@ -316,9 +291,9 @@ export class Tafgeet {
   }
 
   /**
-   * Renders a value 0–999 as Arabic words (without any column/currency suffix).
-   * Exposed publicly for use as a low-level helper; for whole amounts, use
-   * `parse()` instead.
+   * Renders a value 0–999 as Arabic words (without any column/currency suffix),
+   * using the masculine forms. Exposed publicly as a low-level helper; for
+   * whole amounts, use `parse()` instead.
    *
    * `0` returns `''` (no Arabic word for zero in this dictionary).
    *
@@ -332,74 +307,6 @@ export class Tafgeet {
     if (d < 0 || d > 999) {
       throw new AmountOutOfRangeError(`Tafgeet.read: argument must be in 0..999, got ${d}`);
     }
-    if (d === 0) return '';
-    if (d < 10) return this.readOnes(d);
-    if (d < 100) return this.readTens(d);
-    return this.readHundreds(d);
-  }
-
-  // Maps digit-count of the integer part -> starting column index.
-  //   1–3 digits:  hundreds-only (handled separately in parse(); returns 0).
-  //   4–6 digits:  thousands  (column 3)
-  //   7–9 digits:  millions   (column 2)
-  //   10–12 digits: billions  (column 1)
-  //   13–15 digits: trillions (column 0)
-  private getColumnIndex(): number {
-    const len = this.digit.toString().length;
-    if (len <= 3) return 0;
-    if (len <= 6) return 3;
-    if (len <= 9) return 2;
-    if (len <= 12) return 1;
-    return 0;
-  }
-
-  private readOnes(d: number): string {
-    if (d === 0) return '';
-    return ONES[d] ?? '';
-  }
-
-  private readTens(d: number): string {
-    const onesDigit = d % 10;
-    const tensDigit = Math.floor(d / 10);
-    if (onesDigit === 0) return TENS[d] ?? '';
-    if (d > 10 && d < 20) return TEENS[d] ?? '';
-    if (d > 19 && d < 100) {
-      return (ONES[onesDigit] ?? '') + ' و' + (TENS[tensDigit * 10] ?? '');
-    }
-    return '';
-  }
-
-  private readHundreds(d: number): string {
-    const hundredsDigit = Math.floor(d / 100);
-    const lastTwo = d % 100;
-    const tensDigit = Math.floor(lastTwo / 10);
-    const onesDigit = lastTwo % 10;
-
-    let str = HUNDREDS[hundredsDigit * 100] ?? '';
-    if (tensDigit === 0 && onesDigit !== 0) {
-      str += ' و' + (ONES[onesDigit] ?? '');
-    } else if (tensDigit !== 0) {
-      str += ' و' + this.readTens(lastTwo);
-    }
-    return str;
-  }
-
-  /**
-   * Renders a single 1–999 group followed by its column suffix
-   * (ألف / مليون / مليار / ترليون), applying Arabic singular / dual /
-   * plural rules for the count:
-   *   1     -> singular (ألف)
-   *   2     -> dual     (ألفين)
-   *   3–9   -> count + plural (ثلاثة ألآف)
-   *   10+   -> rendered + singular (عشرة ألف)
-   */
-  private addSuffixForGroup(value: number, columnIdx: number): string {
-    const colName = columns[columnIdx];
-    const props = colName ? COLUMN_PROPERTIES[colName] : undefined;
-    if (!props) return this.read(value);
-    if (value === 1) return props.singular;
-    if (value === 2) return props.binary;
-    if (value >= 3 && value <= 9) return `${ONES[value] ?? ''} ${props.plural}`;
-    return `${this.read(value)} ${props.singular}`;
+    return readNumber(d, 'm', false);
   }
 }
