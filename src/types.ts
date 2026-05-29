@@ -5,7 +5,7 @@
 
 /**
  * Lexical forms for an Arabic scale word: singular (1), dual (2),
- * broken plural (3–9). Example for ألف / ألفان / آلاف. `binary` is the
+ * broken plural (3–10). Example for ألف / ألفان / آلاف. `binary` is the
  * nominative dual (ألفان); the renderer drops the final nūn when the dual
  * is مضاف (immediately followed by its counted noun): ألفا جنيه.
  */
@@ -98,8 +98,11 @@ export type CurrencyInput = CurrencyCode | '' | (string & {});
 export type RoundingMode = 'truncate' | 'round' | 'floor' | 'ceil' | 'bankers';
 
 /**
- * Optional third argument to the Tafgeet constructor. `precision`,
- * `feminine`, `accusative`, and `style` are planned for v1.3+.
+ * Optional third argument to the Tafgeet constructor.
+ *
+ * Gender is intentionally NOT an option — it is intrinsic to each currency
+ * (see {@link Currency.gender}) and derived automatically. A diacritized /
+ * accusative output mode may be added in the future.
  */
 export interface TafgeetOptions {
   /** See {@link RoundingMode}. Defaults to `'truncate'`. */
